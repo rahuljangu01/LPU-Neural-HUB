@@ -1,0 +1,31 @@
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;300;400;500;700;900&display=swap');
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  body {
+    margin: 0;
+    background-color: #f8fafc; /* Professional Light Slate */
+    color: #1e293b;
+    font-family: 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 0.85rem; /* 20% Smaller UI Scaling */
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: #ea580c; border-radius: 10px; }
+
+  /* Custom Scrollbar for Matrix */
+.custom-scroll-dark::-webkit-scrollbar {
+  height: 6px; /* Horizontal scroll ki height */
+}
+
+.custom-scroll-dark::-webkit-scrollbar-thumb {
+  background: #ea580c; /* Orange color scroll handle */
+  border-radius: 10px;
+}
+
+.custom-scroll-dark::-webkit-scrollbar-track {
+  background: #020617; /* Dark background track */
+}
