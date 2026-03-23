@@ -445,7 +445,22 @@ const AdminDashboard = () => {
                                                 <span className="text-[10px] font-black uppercase truncate pr-4 text-slate-800 italic">{s.name}</span>
                                                 <span className={`text-[8px] font-black uppercase italic pr-2 ${s.batch && s.batch !== viewBatchDetails.name ? 'text-red-500' : 'text-slate-400'}`}>{s.batch ? `LINKED: ${s.batch}` : 'READY'}</span>
                                             </div>
-                                            {s.batch === viewBatchDetails.name ? <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg pr-2 italic">Assigned</span> : <button onClick={() => assignStudentToBatch(s._id, viewBatchDetails.name)} className="bg-purple-600 text-white p-1.5 rounded-lg hover:bg-orange-600 transition-all flex-shrink-0"><Plus size={14}/></button>}
+                                          {s.batch === viewBatchDetails.name ? (
+                                          <button 
+                                              onClick={() => assignStudentToBatch(s._id, '')} 
+                                              className="bg-red-50 text-red-600 p-1.5 rounded-lg hover:bg-red-600 hover:text-white transition-all flex items-center gap-1 group"
+                                          >
+                                              <X size={14}/>
+                                              <span className="text-[8px] font-black uppercase hidden group-hover:block">Remove</span>
+                                          </button>
+                                      ) : (
+                                          <button 
+                                              onClick={() => assignStudentToBatch(s._id, viewBatchDetails.name)} 
+                                              className="bg-purple-600 text-white p-1.5 rounded-lg hover:bg-orange-600 transition-all flex-shrink-0"
+                                          >
+                                              <Plus size={14}/>
+                                          </button>
+                                      )}
                                         </div>
                                     ))}
                                 </div>

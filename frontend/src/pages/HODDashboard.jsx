@@ -19,6 +19,7 @@ const HODDashboard = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState(0);
   
+  // --- DATABASE & ENGINE STATES ---
   const [variants, setVariants] = useState([]); 
   const [activeVariantIndex, setActiveVariantIndex] = useState(0); 
   const [faculties, setFaculties] = useState([]);
@@ -31,6 +32,7 @@ const HODDashboard = () => {
   const [msgContent, setMsgContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // AI PARAMETERS
   const [params, setParams] = useState({ 
     maxLoad: 6, 
     leaveBuffer: true, 
@@ -43,6 +45,7 @@ const HODDashboard = () => {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const aiSteps = ["Applying Parameters", "Mapping Fixed Slots", "Resolving Clashes", "Finalizing Timetable"];
 
+  // 1. DATA FETCHING
   const fetchHubIntel = useCallback(async () => {
     try {
       const [u, s, m, r, b, sub] = await Promise.all([
@@ -73,6 +76,7 @@ const HODDashboard = () => {
     else setView('main');
   }, [fetchHubIntel, location.pathname]);
 
+  // 2. ANALYTICS & FILTERS
   const analytics = useMemo(() => {
     const totalPossibleSlots = (rooms.length || 1) * 6 * 7; 
     return { util: totalPossibleSlots > 0 ? Math.min(Math.round((currentSchedule.length / totalPossibleSlots) * 100), 100) : 0 };
@@ -98,6 +102,7 @@ const HODDashboard = () => {
     }, {});
   }, [currentSchedule]);
 
+  // 3. HANDLERS
   const executeNeuralEngine = async () => {
     if (!(await confirmDialog("Generate Timetable?", "AI will create 3 optimized timetable options for you."))) return;
     setIsGenerating(true);
@@ -143,18 +148,18 @@ const HODDashboard = () => {
       try {
         await Promise.all(currentSchedule.map(s => API.delete(`/timetable/${s._id}`)));
         successToast("Timetable Wiped!"); fetchHubIntel();
-      } catch (err) { errorAlert("Error", "Apply failed."); }
+      } catch (err) { errorAlert("Error", "Wipe failed."); }
       finally { setIsGenerating(false); }
     }
   };
 
   const handlePurgeBatch = async (batchName, batchClasses) => {
-    if (await confirmDialog(`Delete ${batchName}?`, "Delete all classes for this Timetable?")) {
+    if (await confirmDialog(`Delete ${batchName}?`, "Delete all classes for this cluster?")) {
       setIsGenerating(true); 
       try {
         await Promise.all(batchClasses.map(s => API.delete(`/timetable/${s._id}`)));
-        successToast(`${batchName} Applied!`); fetchHubIntel();
-      } catch (err) { errorAlert("Error", "Applying failed."); }
+        successToast(`${batchName} Deleted!`); fetchHubIntel();
+      } catch (err) { errorAlert("Error", "Delete failed."); }
       finally { setIsGenerating(false); }
     }
   };
@@ -190,6 +195,8 @@ const HODDashboard = () => {
     } catch (err) { errorAlert("Failed", "Transmission error."); }
   };
 
+  const isDarkModeView = ['optimizer_hub', 'optimizer_results', 'scanner', 'scanner_results', 'broadcast', 'monitor', 'personnel'].includes(view);
+
   return (
     <div className={`h-[calc(100vh-80px)] overflow-y-auto flex flex-col p-3 md:p-6 transition-colors duration-500 font-['Outfit'] bg-[#f8fafc] text-slate-800`}>
       
@@ -200,7 +207,7 @@ const HODDashboard = () => {
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="w-16 h-16 md:w-24 md:h-24 border-t-2 border-red-600 rounded-full flex items-center justify-center mb-6 shadow-2xl bg-red-900/10">
                <Brain size={32} className="text-red-500 animate-pulse md:w-10 md:h-10"/>
             </motion.div>
-            <h1 className="text-xs md:text-base font-black uppercase italic tracking-[0.4em] text-red-500">{genStep < aiSteps.length ? aiSteps[genStep] : 'Processing Matrix'}...</h1>
+            <h1 className="text-xs md:text-base font-black uppercase italic tracking-[0.4em] text-red-500 pr-4">{genStep < aiSteps.length ? aiSteps[genStep] : 'Finalizing Matrix'}...</h1>
           </motion.div>
         )}
       </AnimatePresence>
@@ -209,7 +216,7 @@ const HODDashboard = () => {
         
         {/* --- MAIN HUB VIEW --- */}
         {view === 'main' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col gap-4 md:gap-6 max-w-7xl mx-auto w-full">
+          <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col gap-4 md:gap-6 max-w-7xl mx-auto w-full">
             <div className="bg-[#0a0a0c] p-4 md:p-6 rounded-2xl md:rounded-3xl text-white flex flex-col sm:flex-row items-center justify-between border border-slate-800 gap-4 shadow-xl">
                 <div className="flex items-center gap-4 md:gap-6 text-left w-full sm:w-auto">
                     <div className="bg-red-600/20 p-3 md:p-4 rounded-xl md:rounded-2xl border border-red-600/30 text-red-500 flex-shrink-0"><Cpu size={24}/></div>
@@ -265,7 +272,12 @@ const HODDashboard = () => {
                         <span className="text-[6px] md:text-[9px] font-black uppercase bg-white/5 px-2 md:px-3 py-1 rounded-full text-slate-500 truncate ml-2 pr-2">{f.department}</span>
                      </div>
                      <h3 className="text-xs md:text-lg font-black uppercase italic text-white truncate pr-4">{f.name}</h3>
-                     <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase mt-1 italic truncate pr-4">{f.role}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {f.expertise?.slice(0, 3).map((exp, i) => (
+                          <span key={i} className="text-[7px] font-bold bg-white/10 text-slate-300 px-1.5 py-0.5 rounded uppercase">{exp}</span>
+                        ))}
+                      </div>
+                      <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase mt-2 italic truncate pr-4">{f.role}</p>
                      <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5 flex justify-between items-center">
                         <div className="text-left overflow-hidden"><p className="text-[6px] md:text-[8px] font-black text-slate-600 uppercase pr-1">Max</p><p className="text-[10px] md:text-sm font-black italic text-white pr-2">{f.maxWorkload}h</p></div>
                         <div className="text-right overflow-hidden"><p className="text-[6px] md:text-[8px] font-black text-slate-600 uppercase pr-1">Buffer</p><p className="text-[10px] md:text-sm font-black italic text-white pr-2">{f.avgLeaves}d</p></div>
@@ -284,7 +296,7 @@ const HODDashboard = () => {
                    <ArrowLeft size={14}/> BACK
                 </button>
                 <Settings2 size={32} className="text-red-600 mx-auto mb-4 md:mb-6 mt-6"/>
-                <h1 className="text-lg md:text-2xl font-black uppercase italic tracking-widest mb-6 md:mb-10 text-white pr-4">AI Engine <span className="text-red-600">Parameters</span></h1>
+                <h1 className="text-lg md:text-2xl font-black uppercase italic tracking-widest mb-6 md:mb-10 text-white pr-4">AI Engine Parameters</h1>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 text-left mb-8">
                     <div className="space-y-2">
@@ -366,7 +378,7 @@ const HODDashboard = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-2 md:gap-3 mb-6 overflow-x-auto pb-2">
+                <div className="flex gap-2 md:gap-3 mb-6 overflow-x-auto pb-2 custom-scroll-dark">
                     {variants.map((v, i) => (
                         <button key={i} onClick={() => setActiveVariantIndex(i)} className={`px-4 md:px-8 py-2 md:py-3 rounded-lg text-[8px] md:text-[10px] font-black uppercase transition-all whitespace-nowrap flex-shrink-0 ${activeVariantIndex === i ? 'bg-[#0a0a0c] text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Variant 0{i+1}</button>
                     ))}
@@ -455,7 +467,7 @@ const HODDashboard = () => {
           </motion.div>
         )}
 
-        {/* --- SCANNER VIEW (PWA/WEB FIXED) --- */}
+        {/* --- SCANNER VIEW --- */}
         {view === 'scanner' && (
           <motion.div key="scanner" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-xl mx-auto w-full pt-4 relative px-2">
              <button onClick={() => setView('main')} className="absolute top-2 left-2 text-slate-400 hover:text-blue-500 flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all mb-4"><ArrowLeft size={16}/> Back</button>
@@ -471,7 +483,7 @@ const HODDashboard = () => {
           </motion.div>
         )}
 
-        {/* --- SCANNER RESULTS (FIXED OUTPUT) --- */}
+        {/* --- SCANNER RESULTS --- */}
         {view === 'scanner_results' && (
           <motion.div key="scanner_res" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-5xl mx-auto space-y-6 md:space-y-8 px-2">
              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-600">
@@ -480,13 +492,33 @@ const HODDashboard = () => {
              </div>
              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-10">
                 {availableRooms.map(r => (
-                   <div key={r.roomNumber} className="bg-[#0a0a0c] border border-slate-800 p-6 md:p-8 rounded-xl md:rounded-[2rem] text-center hover:border-blue-500 transition-all text-white shadow-xl overflow-hidden relative group">
-                      <p className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase mb-1 pr-2">Room No.</p>
-                      <p className="text-xl md:text-2xl font-black italic text-white truncate pr-4">R-{r.roomNumber}</p>
-                      <div className="mt-2 md:mt-4 pt-2 md:pt-4 border-t border-white/5 text-[8px] md:text-[9px] font-black uppercase text-blue-400 pr-2">Cap: {r.capacity}</div>
-                      <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity" />
-                   </div>
-                ))}
+                <div key={r.roomNumber} className="bg-[#0a0a0c] border border-slate-800 p-5 md:p-7 rounded-[2rem] text-center hover:border-blue-500 transition-all text-white shadow-xl overflow-hidden relative group flex flex-col justify-between min-h-[160px]">
+                    <div>
+                      <p className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase mb-2 pr-2 italic tracking-widest">Available Room</p>
+                      
+                      {/* Room Number - Added pr-4 to prevent cutting the last letter */}
+                      <p className="text-lg md:text-xl font-black italic text-white pr-4 leading-tight">
+                        R-{r.roomNumber}
+                      </p>
+                      
+                      {/* Room Type Badge - Added dynamically */}
+                      <div className="flex justify-center mt-3">
+                        <span className={`px-2 py-0.5 rounded text-[7px] font-black uppercase italic ${r.type === 'Lab' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'}`}>
+                          {r.type === 'Lab' ? 'Practical Room' : 'Theory Room'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Capacity Footer */}
+                    <div className="mt-4 pt-3 border-t border-white/5">
+                      <p className="text-[9px] md:text-[10px] font-black uppercase text-blue-400 pr-2 tracking-widest">
+                          Capacity: {r.capacity}
+                      </p>
+                    </div>
+
+                    <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity" />
+                </div>
+              ))}
              </div>
           </motion.div>
         )}
@@ -503,7 +535,7 @@ const HODDashboard = () => {
                 <div className="bg-[#0a0a0c] p-6 md:p-10 rounded-2xl md:rounded-3xl border border-slate-800 text-center shadow-2xl">
                     <Megaphone className="text-red-600 animate-bounce mb-4 mx-auto" size={32}/><textarea className="w-full p-4 md:p-6 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-[10px] md:text-xs outline-none h-32 md:h-40 text-red-500 font-bold" placeholder="Transmit data..." value={msgContent} onChange={e => setMsgContent(e.target.value)} /><button onClick={sendBroadcast} className="w-full bg-red-600 py-4 rounded-xl text-[10px] font-black uppercase mt-4 flex items-center justify-center gap-3 italic text-white"><Send size={16}/> Dispatch</button>
                 </div>
-                <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-6 md:p-8 overflow-y-auto max-h-[400px] md:max-h-[500px] shadow-xl space-y-4">
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 md:p-8 overflow-y-auto max-h-[400px] md:max-h-[500px] shadow-xl space-y-4">
                     <h2 className="text-[10px] md:text-xs font-black uppercase italic border-b border-slate-100 pb-4 flex items-center gap-2 text-slate-400 pr-4"><History size={16} className="text-red-600"/> Signal Registry</h2>
                     {messages.map((m, i) => (
                       <div key={i} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center group hover:border-red-600/30 transition-all">

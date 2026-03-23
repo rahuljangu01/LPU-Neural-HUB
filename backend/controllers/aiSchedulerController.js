@@ -4,14 +4,15 @@ const Batch = require('../models/Batch');
 
 exports.generateAITimetable = async (req, res) => {
     try {
-        // Naya: fixedSlots ko request body se liya
         const { maxLoad, batchId, fixedSlots } = req.body; 
         
         // 1. Data Fetching
         const rooms = await Room.find();
+        
+        // FIX: Teacher filter hata diya taaki generic names (Teacher 1, etc.) block na hon
         const allFaculties = await User.find({ 
             role: { $in: ['faculty', 'hod'] },
-            name: { $nin: ['teacher', 'TEACHER', 'Teacher', ''] } 
+            name: { $ne: '' } 
         });
         
         let batchQuery = (batchId && batchId !== 'all') ? { _id: batchId } : {};
@@ -32,7 +33,6 @@ exports.generateAITimetable = async (req, res) => {
             let totalAssigned = 0;
             let totalRequired = 0;
             
-            // Task List creation
             let variantTaskList = [];
             batches.forEach(b => {
                 b.subjects.forEach(sub => {
@@ -48,7 +48,6 @@ exports.generateAITimetable = async (req, res) => {
                 });
             });
 
-            // Deep copy of task list for each variant
             let currentVariantTasks = JSON.parse(JSON.stringify(variantTaskList));
             const shuffledFaculties = [...allFaculties].sort(() => Math.random() - 0.5);
             const shuffledRooms = [...rooms].sort(() => Math.random() - 0.5);
@@ -60,17 +59,15 @@ exports.generateAITimetable = async (req, res) => {
                 for (let task of currentVariantTasks) {
                     const targetSlot = fixedSlots[task.subjectName];
                     
-                    // Agar is subject ke liye koi time fix kiya gaya hai
                     if (targetSlot && targetSlot !== "none") {
-                        // Fixed slot ko har din check karo jab tak hours bache hain
+                        // Fixed slots ko days mein spread karo
                         for (let day of days) {
                             if (task.remainingHours <= 0) break;
 
-                            // Check 1: Batch free hai?
+                            // Conflict Checks
                             const isBatchBusy = optimizedSchedule.some(s => s.day === day && s.timeSlot === targetSlot && s.batch === task.batchName);
                             if (isBatchBusy) continue;
 
-                            // Check 2: Faculty free hai aur available hai?
                             const faculty = shuffledFaculties.find(f => {
                                 const hasExp = f.expertise && f.expertise.some(e => e.trim().toLowerCase() === task.subjectName.trim().toLowerCase());
                                 const isFree = !optimizedSchedule.some(s => s.day === day && s.timeSlot === targetSlot && s.facultyName === f.name);
@@ -78,16 +75,13 @@ exports.generateAITimetable = async (req, res) => {
                             });
                             if (!faculty) continue;
 
-                            // Check 3: Room free hai aur capacity sahi hai?
                             const roomNode = shuffledRooms.find(r => {
-                                const typeMatch = r.type.toLowerCase().trim().includes(task.subjectType.toLowerCase().trim());
                                 const isFree = !optimizedSchedule.some(s => s.day === day && s.timeSlot === targetSlot && s.room === r.roomNumber);
                                 const capacityMatch = r.capacity >= task.studentCount;
-                                return typeMatch && isFree && capacityMatch;
+                                return isFree && capacityMatch;
                             });
                             if (!roomNode) continue;
 
-                            // Success: Fixed slot allot kar diya
                             optimizedSchedule.push({
                                 day, timeSlot: targetSlot,
                                 subject: task.subjectName,
@@ -109,7 +103,7 @@ exports.generateAITimetable = async (req, res) => {
             for (let task of currentVariantTasks) {
                 let attempts = 0; 
                 
-                while (task.remainingHours > 0 && attempts < 300) {
+                while (task.remainingHours > 0 && attempts < 200) { // Slightly reduced attempts for speed
                     let placed = false;
                     attempts++;
 
@@ -120,14 +114,14 @@ exports.generateAITimetable = async (req, res) => {
                         if (placed) break;
 
                         let dynamicMaxLoad = Number(maxLoad) || 6;
-                        if (attempts > 100) dynamicMaxLoad += 1; 
+                        if (attempts > 100) dynamicMaxLoad += 2; 
 
                         const batchDayLoad = optimizedSchedule.filter(s => s.day === day && s.batch === task.batchName).length;
                         if (batchDayLoad >= dynamicMaxLoad) continue;
 
                         const isLab = task.subjectType.toLowerCase().includes('lab');
                         let maxSubjectPerDay = isLab ? 2 : 1; 
-                        if (attempts > 100) maxSubjectPerDay = 3;             
+                        if (attempts > 80) maxSubjectPerDay = 3;             
 
                         const subjectDayLoad = optimizedSchedule.filter(s => s.day === day && s.batch === task.batchName && s.subject === task.subjectName).length;
                         if (subjectDayLoad >= maxSubjectPerDay) continue;
@@ -135,22 +129,20 @@ exports.generateAITimetable = async (req, res) => {
                         for (let slot of currentShuffledSlots) {
                             if (placed) break;
 
-                            // Overlap check
                             const isSlotBusy = optimizedSchedule.some(s => s.day === day && s.timeSlot === slot && s.batch === task.batchName);
                             if (isSlotBusy) continue;
 
                             const faculty = shuffledFaculties.find(f => {
                                 const hasExp = f.expertise && f.expertise.some(e => e.trim().toLowerCase() === task.subjectName.trim().toLowerCase());
                                 const isFree = !optimizedSchedule.some(s => s.day === day && s.timeSlot === slot && s.facultyName === f.name);
-                                let effectiveMaxLoad = f.maxWorkload || 30;
                                 const currentFacultyLoad = optimizedSchedule.filter(s => s.facultyName === f.name).length;
-                                return hasExp && isFree && (currentFacultyLoad < effectiveMaxLoad);
+                                return hasExp && isFree && (currentFacultyLoad < (f.maxWorkload || 30));
                             });
 
                             if (!faculty) continue;
 
                             const roomNode = shuffledRooms.find(r => {
-                                const typeMatch = attempts > 150 ? true : r.type.toLowerCase().trim().includes(task.subjectType.toLowerCase().trim());
+                                const typeMatch = attempts > 120 ? true : r.type.toLowerCase().trim().includes(task.subjectType.toLowerCase().trim());
                                 const isFree = !optimizedSchedule.some(s => s.day === day && s.timeSlot === slot && s.room === r.roomNumber);
                                 const capacityMatch = r.capacity >= task.studentCount;
                                 return typeMatch && isFree && capacityMatch;
@@ -174,19 +166,15 @@ exports.generateAITimetable = async (req, res) => {
                 }
             }
 
-            // Score and Variant creation
             const score = totalRequired > 0 ? Math.round((totalAssigned / totalRequired) * 100) : 0;
-            optimizedSchedule.sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day));
-
             variants.push({
                 variantId: v,
                 utilizationScore: `${score}%`,
-                schedule: optimizedSchedule
+                schedule: optimizedSchedule.sort((a, b) => days.indexOf(a.day) - days.indexOf(b.day))
             });
         }
         res.json({ success: true, variants });
     } catch (err) {
-        console.error("Critical AI Engine Error: ", err.message);
         res.status(500).json({ error: err.message });
     }
 };
