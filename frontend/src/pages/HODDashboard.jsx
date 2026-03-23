@@ -485,43 +485,79 @@ const HODDashboard = () => {
 
         {/* --- SCANNER RESULTS --- */}
         {view === 'scanner_results' && (
-          <motion.div key="scanner_res" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-5xl mx-auto space-y-6 md:space-y-8 px-2">
-             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-600">
-                <button onClick={() => setView('scanner')} className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-blue-500 font-black uppercase text-[10px] tracking-widest transition-all pr-2"><ArrowLeft size={16}/> Reset</button>
-                <p className="text-[8px] md:text-[10px] font-black uppercase italic tracking-[0.2em] text-blue-500 pr-4">{availableRooms.length} Available Class Rooms</p>
-             </div>
-             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-10">
-                {availableRooms.map(r => (
-                <div key={r.roomNumber} className="bg-[#0a0a0c] border border-slate-800 p-5 md:p-7 rounded-[2rem] text-center hover:border-blue-500 transition-all text-white shadow-xl overflow-hidden relative group flex flex-col justify-between min-h-[160px]">
-                    <div>
-                      <p className="text-[7px] md:text-[8px] font-black text-slate-600 uppercase mb-2 pr-2 italic tracking-widest">Available Room</p>
-                      
-                      {/* Room Number - Added pr-4 to prevent cutting the last letter */}
-                      <p className="text-lg md:text-xl font-black italic text-white pr-4 leading-tight">
-                        R-{r.roomNumber}
-                      </p>
-                      
-                      {/* Room Type Badge - Added dynamically */}
-                      <div className="flex justify-center mt-3">
-                        <span className={`px-2 py-0.5 rounded text-[7px] font-black uppercase italic ${r.type === 'Lab' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30' : 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'}`}>
-                          {r.type === 'Lab' ? 'Practical Room' : 'Theory Room'}
-                        </span>
-                      </div>
-                    </div>
+  <motion.div 
+    key="scanner_res" 
+    initial={{ opacity: 0, y: 20 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    exit={{ opacity: 0, y: -20 }} 
+    className="w-full max-w-6xl mx-auto space-y-6 md:space-y-8 px-2 py-4"
+  >
+     {/* HEADER: Reset & Count */}
+     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <button 
+          onClick={() => setView('scanner')} 
+          className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-blue-500 font-black uppercase text-[10px] tracking-widest transition-all pr-2"
+        >
+           <ArrowLeft size={16}/> RESET SCANNER
+        </button>
+        <p className="text-[10px] font-black uppercase italic tracking-[0.2em] text-blue-600 pr-6">
+          {availableRooms.length} Available Nodes Found
+        </p>
+     </div>
 
-                    {/* Capacity Footer */}
-                    <div className="mt-4 pt-3 border-t border-white/5">
-                      <p className="text-[9px] md:text-[10px] font-black uppercase text-blue-400 pr-2 tracking-widest">
-                          Capacity: {r.capacity}
-                      </p>
-                    </div>
+     {/* GRID: Room Cards */}
+     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-10">
+        {availableRooms.map(r => {
+          // Logic: Check if it's a lab
+          const isLab = r.type?.toLowerCase().includes('lab') || r.type?.toLowerCase().includes('practical');
 
-                    <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity" />
+          return (
+            <motion.div 
+              key={r.roomNumber}
+              whileHover={{ y: -5 }}
+              className="bg-[#0a0a0c] border border-slate-800 p-5 md:p-6 rounded-[2.5rem] text-center hover:border-blue-500 transition-all text-white shadow-2xl overflow-hidden relative group flex flex-col justify-between min-h-[180px]"
+            >
+                <div>
+                  <p className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase mb-3 tracking-[0.2em] italic pr-2">
+                    Infrastructure Unit
+                  </p>
+                  
+                  {/* Room Number - pr-6 added to fix Italics clipping (X, 1, Y, etc.) */}
+                  <h3 className="text-xl md:text-2xl font-black italic text-white pr-6 leading-none tracking-tighter">
+                    R-{r.roomNumber}
+                  </h3>
+                  
+                  {/* Dynamic Room Type Badge */}
+                  <div className="flex justify-center mt-4">
+                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase italic tracking-wider border ${
+                      isLab 
+                      ? 'bg-purple-600/10 text-purple-400 border-purple-500/30' 
+                      : 'bg-emerald-600/10 text-emerald-400 border-emerald-500/30'
+                    }`}>
+                      {isLab ? 'Practical Lab' : 'Theory Room'}
+                    </span>
+                  </div>
                 </div>
-              ))}
-             </div>
-          </motion.div>
-        )}
+
+                {/* Capacity Footer */}
+                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-center gap-2">
+                  <div className="bg-blue-600/20 p-1.5 rounded-lg">
+                    <UserIcon size={12} className="text-blue-500"/>
+                  </div>
+                  <p className="text-[10px] font-black uppercase text-slate-300 pr-2 tracking-widest">
+                      CAP: {r.capacity}
+                  </p>
+                </div>
+
+                {/* Cyber Decorative Element */}
+                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full -mr-8 -mt-8" />
+                <div className="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-[0.03] transition-opacity pointer-events-none" />
+            </motion.div>
+          );
+        })}
+     </div>
+  </motion.div>
+)}
 
         {/* --- BROADCAST VIEW --- */}
         {view === 'broadcast' && (
