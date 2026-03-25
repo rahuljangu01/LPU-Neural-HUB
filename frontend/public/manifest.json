@@ -1,6 +1,6 @@
 {
   "short_name": "LPU Hub",
-  "name": "LPU AI Timetable Manager",
+  "name": "LPU Neural Hub AI Matrix",
   "icons": [
     {
       "src": "favicon.ico",
@@ -16,11 +16,11 @@
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "theme_color": "#020617",
   "background_color": "#020617"
