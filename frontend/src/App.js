@@ -62,45 +62,71 @@ function App() {
   return (
     <>
       {/* 🚀 PREMIUM PWA INSTALL POPUP */}
+      {/* 🚀 NEURAL SYSTEM INSTALL MODAL - CENTERED & HIGH-TECH */}
       <AnimatePresence>
         {showInstallBtn && (
-          <motion.div 
-            initial={{ y: 150, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
-            exit={{ y: 150, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 25 }}
-            /* bottom-10 ensures it stays above the phone's home gesture bar */
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[2000] w-[90%] max-w-[340px] bg-[#020617] border border-orange-500/40 rounded-[2rem] p-4 shadow-[0_15px_50px_rgba(0,0,0,0.8)] flex flex-col items-center gap-4 overflow-hidden backdrop-blur-xl"
-            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }} 
-          >
-            {/* Subtle Background Glow */}
-            <div className="absolute -top-10 -right-10 w-20 h-20 bg-orange-600/10 blur-2xl rounded-full" />
-            
-            <div className="flex items-center justify-between w-full relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="bg-orange-600 p-2 rounded-xl shadow-lg">
-                  <ShieldCheck size={18} className="text-white animate-pulse" />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-black text-[10px] uppercase italic tracking-widest leading-none">LPU NEURAL HUB</p>
-                  <p className="text-slate-500 text-[8px] font-bold uppercase tracking-tighter mt-1">Ready for System Download</p>
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
+            {/* 1. Backdrop Blur (Piche ka sab dhundla kar dega) */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={dismissInstall}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* 2. Central Alert Card */}
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="relative w-full max-w-[320px] bg-[#050505] border border-orange-500/30 rounded-[3rem] p-8 text-center shadow-[0_0_80px_rgba(234,88,12,0.2)] overflow-hidden"
+            >
+              {/* Holographic Top Line */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600 to-transparent shadow-[0_0_20px_orange]" />
+
+              {/* Animated Icon Container */}
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                  className="absolute -inset-2 border-2 border-dashed border-orange-500/20 rounded-full"
+                />
+                <div className="w-full h-full bg-orange-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-orange-900/40">
+                    <ShieldCheck size={40} className="text-white animate-pulse" />
                 </div>
               </div>
-              
-              {/* Close Button */}
-              <button onClick={dismissInstall} className="text-slate-600 hover:text-white transition-colors">
-                <X size={20}/>
-              </button>
-            </div>
 
-            {/* Action Button - Moved to bottom for better mobile touch */}
-            <button 
-              onClick={handleInstallClick}
-              className="w-full bg-white text-black py-3 rounded-xl text-[10px] font-black uppercase italic shadow-xl hover:bg-orange-600 hover:text-white transition-all flex items-center justify-center gap-2 relative z-10"
-            >
-              <Download size={14} /> INSTALL APPLICATION
-            </button>
-          </motion.div>
+              {/* Text Content */}
+              <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none mb-3">
+                Initialize <br/> <span className="text-orange-600">Neural Link?</span>
+              </h2>
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-10 leading-relaxed px-4">
+                Download the core application for high-speed matrix synchronization.
+              </p>
+
+              {/* Buttons Row */}
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleInstallClick}
+                  className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest shadow-xl hover:bg-orange-600 hover:text-white transition-all flex items-center justify-center gap-3"
+                >
+                  <Download size={18} /> Authorize Install
+                </button>
+                
+                <button 
+                  onClick={dismissInstall}
+                  className="w-full py-3 text-slate-600 hover:text-white transition-colors font-black uppercase text-[9px] tracking-[0.3em]"
+                >
+                  Abort Protocol
+                </button>
+              </div>
+
+              {/* Cyber Decorative Element */}
+              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl rounded-full" />
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
