@@ -61,72 +61,44 @@ function App() {
 
   return (
     <>
-      {/* 🚀 PREMIUM PWA INSTALL POPUP */}
-      {/* 🚀 NEURAL SYSTEM INSTALL MODAL - CENTERED & HIGH-TECH */}
+      {/* 🚀 SLIM TOP-CENTER INSTALL POPUP */}
       <AnimatePresence>
         {showInstallBtn && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
-            {/* 1. Backdrop Blur (Piche ka sab dhundla kar dega) */}
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              onClick={dismissInstall}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            />
+          <motion.div 
+            initial={{ y: -100, x: '-50%', opacity: 0 }} 
+            animate={{ y: 0, x: '-50%', opacity: 1 }} 
+            exit={{ y: -100, x: '-50%', opacity: 0 }}
+            transition={{ type: "spring", stiffness: 200, damping: 22 }}
+            className="fixed top-6 left-1/2 z-[3000] w-[90%] max-w-[320px] bg-[#020617]/95 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-3 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 overflow-hidden"
+          >
+            {/* Background Subtle Glow */}
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-orange-600/5 to-transparent pointer-events-none" />
 
-            {/* 2. Central Alert Card */}
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="relative w-full max-w-[320px] bg-[#050505] border border-orange-500/30 rounded-[3rem] p-8 text-center shadow-[0_0_80px_rgba(234,88,12,0.2)] overflow-hidden"
-            >
-              {/* Holographic Top Line */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600 to-transparent shadow-[0_0_20px_orange]" />
-
-              {/* Animated Icon Container */}
-              <div className="relative w-20 h-20 mx-auto mb-6">
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                  className="absolute -inset-2 border-2 border-dashed border-orange-500/20 rounded-full"
-                />
-                <div className="w-full h-full bg-orange-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-orange-900/40">
-                    <ShieldCheck size={40} className="text-white animate-pulse" />
-                </div>
+            {/* Left: Mini Icon & Text */}
+            <div className="flex items-center gap-3 relative z-10 pl-1">
+              <div className="bg-orange-600 p-1.5 rounded-lg shadow-lg">
+                <ShieldCheck size={16} className="text-white animate-pulse" />
               </div>
-
-              {/* Text Content */}
-              <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none mb-3">
-                Initialize <br/> <span className="text-orange-600">Neural Link?</span>
-              </h2>
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-10 leading-relaxed px-4">
-                Download the core application for high-speed matrix synchronization.
-              </p>
-
-              {/* Buttons Row */}
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={handleInstallClick}
-                  className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase italic text-[11px] tracking-widest shadow-xl hover:bg-orange-600 hover:text-white transition-all flex items-center justify-center gap-3"
-                >
-                  <Download size={18} /> Authorize Install
-                </button>
-                
-                <button 
-                  onClick={dismissInstall}
-                  className="w-full py-3 text-slate-600 hover:text-white transition-colors font-black uppercase text-[9px] tracking-[0.3em]"
-                >
-                  Abort Protocol
-                </button>
+              <div className="text-left leading-none">
+                <p className="text-white font-black text-[9px] uppercase italic tracking-wider">LPU Neural Hub</p>
+                <p className="text-slate-500 text-[7px] font-bold uppercase mt-0.5">V4.5 Terminal Ready</p>
               </div>
+            </div>
 
-              {/* Cyber Decorative Element */}
-              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-orange-600/5 blur-3xl rounded-full" />
-            </motion.div>
-          </div>
+            {/* Right: Action Buttons */}
+            <div className="flex items-center gap-2 relative z-10">
+              <button 
+                onClick={handleInstallClick}
+                className="bg-white text-black px-4 py-1.5 rounded-lg text-[9px] font-black uppercase italic shadow-lg hover:bg-orange-600 hover:text-white transition-all flex items-center gap-1.5"
+              >
+                <Download size={12} /> GET APP
+              </button>
+              
+              <button onClick={dismissInstall} className="p-1 text-slate-600 hover:text-white transition-colors">
+                <X size={16}/>
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
