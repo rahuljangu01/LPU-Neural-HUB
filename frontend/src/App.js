@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion'; // Animations ke liye
-import { X, Download, ShieldCheck } from 'lucide-react'; // Icons
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Download, ShieldCheck } from 'lucide-react';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import RoleSelection from './pages/RoleSelection';
@@ -24,17 +24,16 @@ function App() {
   const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   useEffect(() => {
-    // 1. Browser ke default prompt ko pakadna
+    // 1. Capture the Install Event
     window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('beforeinstallprompt triggered');
       e.preventDefault();
       setDeferredPrompt(e);
-      // Check karo ki kahin user ne pehle se "Dismiss" toh nahi kiya
-      if (!localStorage.getItem('pwaDismissed')) {
-        setShowInstallBtn(true);
-      }
+      // 🔥 LocalStorage check hata diya hai taaki popup wapas aa sake
+      setShowInstallBtn(true);
     });
 
-    // 2. Install hone ke baad button gayab kar dena
+    // 2. Hide button after installation
     window.addEventListener('appinstalled', () => {
       setShowInstallBtn(false);
       setDeferredPrompt(null);
@@ -44,7 +43,7 @@ function App() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt(); // Asli Browser Prompt dikhao
+    deferredPrompt.prompt(); 
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       console.log('User accepted the install');
@@ -55,8 +54,8 @@ function App() {
 
   const dismissInstall = () => {
     setShowInstallBtn(false);
-    // User ko baar baar pareshan na karne ke liye 24 ghante ka break
-    localStorage.setItem('pwaDismissed', 'true'); 
+    // 🎯 Note: Yahan hum localStorage mein save nahi kar rahe hain taaki 
+    // refresh karne par ya browser dwara event trigger hone par ye fir dikhe.
   };
 
   return (
@@ -69,12 +68,12 @@ function App() {
             animate={{ y: 0, x: '-50%', opacity: 1 }} 
             exit={{ y: -100, x: '-50%', opacity: 0 }}
             transition={{ type: "spring", stiffness: 200, damping: 22 }}
-            className="fixed top-6 left-1/2 z-[3000] w-[90%] max-w-[320px] bg-[#020617]/95 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-3 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 overflow-hidden"
+            className="fixed top-6 left-1/2 z-[3000] w-[90%] max-w-[340px] bg-[#020617]/95 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-3 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 overflow-hidden"
           >
-            {/* Background Subtle Glow */}
+            {/* Background Glow */}
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-orange-600/5 to-transparent pointer-events-none" />
 
-            {/* Left: Mini Icon & Text */}
+            {/* Left Info */}
             <div className="flex items-center gap-3 relative z-10 pl-1">
               <div className="bg-orange-600 p-1.5 rounded-lg shadow-lg">
                 <ShieldCheck size={16} className="text-white animate-pulse" />
@@ -85,7 +84,7 @@ function App() {
               </div>
             </div>
 
-            {/* Right: Action Buttons */}
+            {/* Action Buttons */}
             <div className="flex items-center gap-2 relative z-10">
               <button 
                 onClick={handleInstallClick}
@@ -108,6 +107,7 @@ function App() {
           <Route path="/select-role" element={<RoleSelection />} />
           <Route path="/register" element={<Register />} />
 
+          {/* ADMIN DASHBOARD ROUTES */}
           <Route path="/admin" element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
           <Route path="/admin/rooms" element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
@@ -115,6 +115,7 @@ function App() {
           <Route path="/admin/batches" element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
           <Route path="/admin/broadcast" element={<ProtectedRoute><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
 
+          {/* HOD DASHBOARD ROUTES */}
           <Route path="/hod" element={<ProtectedRoute><Layout><HODDashboard /></Layout></ProtectedRoute>} />
           <Route path="/hod/optimizer" element={<ProtectedRoute><Layout><HODDashboard /></Layout></ProtectedRoute>} />
           <Route path="/hod/monitor" element={<ProtectedRoute><Layout><HODDashboard /></Layout></ProtectedRoute>} />
@@ -122,13 +123,16 @@ function App() {
           <Route path="/hod/broadcast" element={<ProtectedRoute><Layout><HODDashboard /></Layout></ProtectedRoute>} />
           <Route path="/hod/personnel" element={<ProtectedRoute><Layout><HODDashboard /></Layout></ProtectedRoute>} />
 
+          {/* FACULTY ROUTES */}
           <Route path="/faculty" element={<ProtectedRoute><Layout><TeacherDashboard /></Layout></ProtectedRoute>} />
           <Route path="/faculty/stats" element={<ProtectedRoute><Layout><TeacherDashboard /></Layout></ProtectedRoute>} />
           <Route path="/faculty/global" element={<ProtectedRoute><Layout><TimetableView /></Layout></ProtectedRoute>} />
 
+          {/* STUDENT ROUTES */}
           <Route path="/student" element={<ProtectedRoute><Layout><StudentDashboard /></Layout></ProtectedRoute>} />
           <Route path="/student/broadcast" element={<ProtectedRoute><Layout><StudentDashboard /></Layout></ProtectedRoute>} />
 
+          {/* 404 REDIRECT */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
