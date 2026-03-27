@@ -42,3 +42,17 @@
 .custom-scroll-dark {
   -webkit-overflow-scrolling: touch;
 }
+
+/* Timetable matrix ko zoom-friendly banane ke liye */
+#weekly-Timetable-capture {
+  touch-action: pinch-zoom; /* 2 fingers ko recognize karega */
+  user-select: none;
+}
+
+/* Force horizontal scroll on small devices during zoom */
+@media (max-width: 768px) {
+  #weekly-Timetable-capture {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}

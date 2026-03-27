@@ -265,32 +265,61 @@ const StudentDashboard = () => {
             </div>
              </div>
              
-             <div className={`w-full ${isZoomed ? 'overflow-x-auto overflow-y-hidden cursor-move' : 'overflow-hidden'}`}>
-              <div className={`grid grid-cols-7 gap-1 md:gap-5 transition-all duration-500 ${isZoomed ? 'min-w-[1000px] py-10 scale-110' : 'w-full'}`}>
-                    <div className="col-span-1 space-y-2 md:space-y-4 pt-12 md:pt-24 text-right pr-2 border-r border-white/5">
-                        {timeSlots.map(s => <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-600 uppercase italic tracking-tighter pr-4">{s.split(' - ')[0]}</div>)}
-                    </div>
-                    {days.map(day => (
-                        <div key={day} className="col-span-1 space-y-2 md:space-y-4 text-center">
-                            <h1 className={`text-[7px] md:text-xs font-black uppercase tracking-[0.1em] pb-4 md:pb-10 border-b border-white/5 mb-4 md:mb-8 pr-4 ${day === currentDay ? 'text-orange-500 underline underline-offset-[10px] decoration-2' : 'text-slate-50'}`}>{day.slice(0, 3)}</h1>
-                            {timeSlots.map((slot, i) => {
-                                const session = timetable.find(t => t.day === day && t.timeSlot === slot);
-                                const isCurrentSlot = day === currentDay && currentClass?.timeSlot === slot;
-                                return (
-                                    <div key={i} className={`h-12 md:h-20 rounded-md md:rounded-[2rem] border flex flex-col items-center justify-center p-0.5 md:p-4 transition-all duration-500 ${session ? (isCurrentSlot ? 'bg-orange-600 border-white shadow-[0_0_20px_rgba(234,88,12,0.6)] z-20 scale-105' : 'bg-orange-600/10 border-orange-500/30 opacity-100') : 'bg-white/5 border-transparent opacity-5'}`}>
-                                        {session ? (
-                                            <>
-                                                <p className={`text-[5px] md:text-[10px] font-black uppercase italic truncate w-full text-center leading-none pr-2 ${isCurrentSlot ? 'text-white' : 'text-orange-500'}`}>{session.subject}</p>
-                                                <div className={`mt-0.5 md:mt-2 px-1 py-0 rounded-[2px] md:rounded text-[4px] md:text-[8px] font-black ${isCurrentSlot ? 'bg-white text-orange-600' : 'bg-orange-600 text-white'}`}>R-{session.room}</div>
-                                            </>
-                                        ) : <span className="text-[5px] opacity-10 italic pr-4">VOID</span>}
-                                    </div>
-                                )
-                            })}
+             {/* 🚀 START OF UPDATED ZOOMABLE & DRAGGABLE STUDENT MATRIX */}
+<div className="w-full overflow-hidden border border-white/5 rounded-[2rem] bg-black/10 cursor-grab active:cursor-grabbing">
+  <motion.div 
+    drag 
+    dragConstraints={{ left: -500, right: 0, top: -150, bottom: 150 }} 
+    style={{ touchAction: 'none' }}
+    className="w-full"
+  >
+    <div className="grid grid-cols-7 gap-1 md:gap-5 min-w-[900px] md:min-w-full py-6 md:py-12 text-center">
+        
+        {/* TIME COLUMN */}
+        <div className="col-span-1 space-y-2 md:space-y-4 pt-10 md:pt-24 text-right pr-2 border-r border-white/5">
+            {timeSlots.map(s => (
+              <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-500 uppercase italic tracking-tighter pr-4">
+                {s.split(' - ')[0]}
+              </div>
+            ))}
+        </div>
+
+        {/* DAYS COLUMNS */}
+        {days.map(day => (
+            <div key={day} className="col-span-1 space-y-2 md:space-y-4">
+                <h1 className={`text-[7px] md:text-xs font-black uppercase tracking-[0.1em] pb-4 md:pb-10 border-b border-white/5 mb-4 md:mb-8 pr-6 ${day === currentDay ? 'text-orange-500 underline underline-offset-[10px] decoration-2' : 'text-slate-400'}`}>
+                  {day.slice(0, 3)}
+                </h1>
+                
+                {timeSlots.map((slot, i) => {
+                    const session = timetable.find(t => t.day === day && t.timeSlot === slot);
+                    const isCurrentSlot = day === currentDay && currentClass?.timeSlot === slot;
+                    
+                    return (
+                        <div key={i} className={`h-12 md:h-20 rounded-md md:rounded-[2rem] border flex flex-col items-center justify-center p-0.5 md:p-4 transition-all duration-500 ${session ? (isCurrentSlot ? 'bg-orange-600 border-white shadow-[0_0_25px_rgba(234,88,12,0.5)] z-20 scale-105' : 'bg-orange-600/10 border-orange-500/30 opacity-100') : 'bg-white/5 border-transparent opacity-5'}`}>
+                            {session ? (
+                              <>
+                                {/* pr-4 added to fix italic clipping for subject name */}
+                                <p className={`text-[5px] md:text-[10px] font-black uppercase italic truncate w-full text-center leading-none pr-4 ${isCurrentSlot ? 'text-white' : 'text-orange-500'}`}>
+                                  {session.subject}
+                                </p>
+                                <div className={`mt-0.5 md:mt-2 px-1 py-0 rounded-[2px] md:rounded text-[4px] md:text-[8px] font-black ${isCurrentSlot ? 'bg-white text-orange-600' : 'bg-orange-600 text-white'} pr-1`}>
+                                  R-{session.room}
+                                </div>
+                              </>
+                            ) : (
+                              /* pr-6 added to fix 'VOID' clipping */
+                              <span className="text-[5px] opacity-10 italic pr-6 uppercase tracking-tighter">Void</span>
+                            )}
                         </div>
-                    ))}
-                </div>
-             </div>
+                    )
+                })}
+            </div>
+        ))}
+    </div>
+  </motion.div>
+</div>
+{/* 🚀 END OF UPDATED MATRIX */}
              <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-orange-600/5 blur-[120px] rounded-full" />
           </motion.div>
         )}
