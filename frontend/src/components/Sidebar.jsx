@@ -70,7 +70,8 @@ const Sidebar = () => {
   return (
     <>
       {/* 🍔 MOBILE BURGER BUTTON */}
-      <div className="lg:hidden fixed top-5 left-4 z-[110]">
+      <div className="lg:hidden fixed top-5 left-4 z-[2000]">
+
         <motion.button 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -107,7 +108,8 @@ const Sidebar = () => {
         variants={sidebarVariants}
         initial="closed"
         animate={isOpen || window.innerWidth >= 1024 ? "open" : "closed"}
-        className={`h-screen fixed left-0 top-0 z-[100] flex flex-col bg-[#020617] border-r border-white/5 font-['Outfit'] shadow-[10px_0_50px_rgba(0,0,0,0.5)] w-72 lg:w-64 xl:w-72`}
+        /* 🚀 FIX: z-[1001] ensures it stays above everything, and 'fixed top-0 left-0' is strictly enforced */
+        className="h-full fixed left-0 top-0 z-[1001] flex flex-col bg-[#020617] border-r border-white/5 font-['Outfit'] shadow-[20px_0_50px_rgba(0,0,0,0.3)] w-72 lg:w-64 xl:w-72 overflow-hidden"
       >
         {/* LOGO SECTION */}
         <div className="p-8 text-center border-b border-white/5 relative overflow-hidden">
@@ -137,10 +139,10 @@ const Sidebar = () => {
         </div>
 
         {/* 📋 NAVIGATION LINKS (STAGGERED ANIMATION) */}
-        <motion.nav 
-            variants={containerVariants}
-            className="flex-1 px-4 space-y-2 mt-2 overflow-y-auto custom-scroll pb-10"
-        >
+              <motion.nav 
+                  variants={containerVariants}
+                  className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scroll pb-10 h-full"
+              >
           {navLinks.map((item) => {
             const isActive = location.pathname === item.path;
             return (
