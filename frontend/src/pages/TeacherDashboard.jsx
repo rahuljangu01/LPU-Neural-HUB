@@ -99,11 +99,16 @@ const TeacherDashboard = () => {
     return () => clearInterval(interval);
   }, [stats.upcomingClasses, lastNotifiedId]);
 
+  // 🎯 FIXED: handleExport ID sync
   const handleExport = async () => {
     const element = document.getElementById('faculty-matrix-capture');
     if (!element) return;
     try {
-      const canvas = await html2canvas(element, { scale: 2, backgroundColor: "#f8fafc" });
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        backgroundColor: "#f8fafc",
+        useCORS: true 
+      });
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
       link.download = `Faculty_Matrix_${facultyName}.png`;
@@ -115,21 +120,22 @@ const TeacherDashboard = () => {
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#f8fafc] gap-4">
         <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-['Outfit']">Syncing Matrix...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-['Outfit'] pr-4">Syncing Matrix...</p>
     </div>
   );
 
   return (
-    <div className="p-3 md:p-10 space-y-6 md:space-y-10 font-['Outfit'] min-h-screen bg-[#f8fafc] max-w-7xl mx-auto overflow-hidden">
+    <div className="p-3 md:p-10 space-y-6 md:space-y-10 font-['Outfit'] min-h-screen bg-[#f8fafc] max-w-7xl mx-auto overflow-hidden transform-gpu">
       
+      {/* 🔔 FLOATING REMINDER */}
       <AnimatePresence>
         {reminder && (
           <motion.div initial={{ opacity: 0, y: -100, x: '-50%' }} animate={{ opacity: 1, y: 20, x: '-50%' }} exit={{ opacity: 0, y: -100, x: '-50%' }} className="fixed top-0 left-1/2 z-[1000] w-[90%] max-w-md px-4 text-left">
             <div className="bg-[#020617] border-2 border-orange-500 rounded-3xl p-4 md:p-6 shadow-2xl flex items-center gap-4 text-white">
               <div className="bg-orange-600 p-2 md:p-3 rounded-2xl animate-bounce flex-shrink-0"><BellRing size={20}/></div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-[8px] md:text-[10px] font-black text-orange-500 uppercase tracking-widest leading-none mb-1">Incoming Session (5m)</p>
-                <h4 className="text-sm md:text-lg font-black uppercase italic leading-tight truncate pr-2">{reminder.subject}</h4>
+                <p className="text-[8px] md:text-[10px] font-black text-orange-500 uppercase tracking-widest leading-none mb-1 pr-2">Incoming Session (5m)</p>
+                <h4 className="text-sm md:text-lg font-black uppercase italic leading-tight truncate pr-4">{reminder.subject}</h4>
                 <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Batch {reminder.batch} • Room {reminder.room}</p>
               </div>
               <button onClick={() => setReminder(null)} className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"><X size={18}/></button>
@@ -138,13 +144,15 @@ const TeacherDashboard = () => {
         )}
       </AnimatePresence>
 
+      {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-slate-200 pb-6 md:pb-10 text-left">
         <div className="space-y-2 w-full md:w-auto">
             <div className="flex items-center gap-2 md:gap-3">
                 <div className="bg-orange-600 p-1.5 rounded-lg text-white shadow-lg"><ShieldCheck size={16}/></div>
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic pr-2">Department • {facultyData?.department}</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 italic pr-4">Department • {facultyData?.department}</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none pr-4">
+            {/* Added pr-8 to fix Prof. Name clipping */}
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none pr-8">
               Prof. <span className="text-orange-600">{facultyName.split(' ')[0]}</span>
             </h1>
         </div>
@@ -158,6 +166,7 @@ const TeacherDashboard = () => {
 
       <AnimatePresence mode="wait">
         
+        {/* TAB 1: TODAY */}
         {activeTab === 'today' && (
           <motion.div key="today" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6 md:space-y-8 text-left">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -169,7 +178,7 @@ const TeacherDashboard = () => {
                 ].map((s, i) => (
                     <div key={i} className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center gap-3 md:gap-4 hover:shadow-md transition-all">
                         <div className="bg-slate-50 p-2 md:p-3 rounded-xl flex-shrink-0">{s.icon}</div>
-                        <div className="overflow-hidden"><p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p><p className="text-xs md:text-sm font-black text-slate-800 italic mt-0.5 truncate pr-1">{s.val}</p></div>
+                        <div className="overflow-hidden"><p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest pr-2">{s.label}</p><p className="text-xs md:text-sm font-black text-slate-800 italic mt-0.5 truncate pr-2">{s.val}</p></div>
                     </div>
                 ))}
             </div>
@@ -178,14 +187,14 @@ const TeacherDashboard = () => {
                 <div className="text-center md:text-left relative z-10 w-full">
                     <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
                         <div className={`w-2 h-2 rounded-full ${stats.currentClass ? 'bg-red-500 animate-ping' : 'bg-slate-300'}`} />
-                        <p className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] pr-2 ${stats.currentClass ? 'text-orange-500' : 'text-slate-400'}`}>System Active</p>
+                        <p className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] pr-4 ${stats.currentClass ? 'text-orange-500' : 'text-slate-400'}`}>System Active</p>
                     </div>
-                    <h2 className="text-3xl md:text-5xl font-black uppercase italic leading-none tracking-tighter pr-4">{stats.currentClass ? stats.currentClass.subject : 'Class Starting Soon'}</h2>
+                    <h2 className="text-3xl md:text-5xl font-black uppercase italic leading-none tracking-tighter pr-6">{stats.currentClass ? stats.currentClass.subject : 'Class Starting Soon'}</h2>
                     {stats.currentClass && (
-                      <div className="flex justify-center md:justify-start gap-4 md:gap-8 mt-6 text-slate-400 font-bold text-xs uppercase pr-2">
+                      <div className="flex justify-center md:justify-start gap-4 md:gap-8 mt-6 text-slate-400 font-bold text-xs uppercase pr-4">
                         <span><Clock size={14} className="text-orange-600 inline mr-2"/> {stats.currentClass.timeSlot}</span>
                         <span><MapPin size={14} className="text-red-500 inline mr-2"/> Room {stats.currentClass.room}</span>
-                        <span className="text-white italic pr-1"><Zap size={14} className="text-orange-500 inline mr-2"/> {stats.currentClass.batch}</span>
+                        <span className="text-white italic pr-2"><Zap size={14} className="text-orange-500 inline mr-2"/> {stats.currentClass.batch}</span>
                       </div>
                     )}
                 </div>
@@ -198,16 +207,16 @@ const TeacherDashboard = () => {
                         <div className="flex items-center gap-5 md:gap-8 w-full md:w-auto">
                             <div className="bg-slate-900 text-orange-500 p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform"><BookOpen size={28}/></div>
                             <div className="flex-1 overflow-hidden">
-                              <h4 className="text-lg md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter truncate pr-4">{cls.subject}</h4>
+                              <h4 className="text-lg md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter truncate pr-6">{cls.subject}</h4>
                               <div className="flex gap-4 mt-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5"><Clock size={14} className="text-orange-500"/> {cls.timeSlot}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5"><MapPin size={14} className="text-red-500"/> Unit {cls.room}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5 pr-1"><Clock size={14} className="text-orange-500"/> {cls.timeSlot}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5 pr-1"><MapPin size={14} className="text-red-500"/> Unit {cls.room}</span>
                               </div>
                             </div>
                         </div>
                         <div className="bg-slate-50 w-full md:w-auto px-6 py-2 rounded-xl border border-slate-100 text-center md:text-right">
-                            <p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase mb-0.5 pr-1">Batch</p>
-                            <p className="text-[10px] md:text-xs font-black text-slate-800 uppercase italic truncate pr-2">{cls.batch}</p>
+                            <p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase mb-0.5 pr-2">Batch</p>
+                            <p className="text-[10px] md:text-xs font-black text-slate-800 uppercase italic truncate pr-4">{cls.batch}</p>
                         </div>
                     </div>
                 ))}
@@ -215,11 +224,13 @@ const TeacherDashboard = () => {
           </motion.div>
         )}
 
+        {/* TAB 2: WEEKLY MATRIX */}
         {activeTab === 'matrix' && (
           <motion.div key="matrix" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} id="faculty-matrix-capture" className="bg-white rounded-[2rem] md:rounded-[4rem] p-4 md:p-12 shadow-2xl border border-slate-100 flex flex-col overflow-hidden relative text-left">
              <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-100 pb-8 gap-4">
                 <div className="text-center md:text-left">
-                  <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-1 pr-4">Weekly Classes</h3>
+                  <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-1 pr-8">Weekly Classes</h3>
+                  <p className="text-[9px] md:text-[10px] text-orange-600 font-black uppercase tracking-[0.8em] pr-4">Matrix Node v4.5</p>
                 </div>
                 <button onClick={handleExport} className="w-full md:w-auto bg-[#020617] text-white hover:bg-orange-600 px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all italic flex items-center justify-center gap-4 shadow-xl pr-4">
                   <Download size={18} /> Dawnlaod
@@ -229,17 +240,17 @@ const TeacherDashboard = () => {
              <div className="w-full overflow-hidden text-center">
                 <div className="grid grid-cols-7 gap-1 md:gap-5 w-full">
                     <div className="col-span-1 space-y-2 md:space-y-4 pt-10 md:pt-24 text-right pr-2 border-r border-slate-100">
-                        {timeSlots.map(s => <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-400 uppercase italic tracking-tighter pr-1">{s.split(' - ')[0]}</div>)}
+                        {timeSlots.map(s => <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-400 uppercase italic tracking-tighter pr-2">{s.split(' - ')[0]}</div>)}
                     </div>
                     {days.map(day => (
                         <div key={day} className="col-span-1 space-y-2 md:space-y-4">
-                            <h1 className={`text-[7px] md:text-xs font-black uppercase tracking-[0.1em] pb-4 md:pb-10 border-b border-slate-100 mb-4 md:mb-8 pr-1 ${day === currentDay ? 'text-orange-500 underline underline-offset-[10px] decoration-2' : 'text-slate-400'}`}>{day.slice(0, 3)}</h1>
+                            <h1 className={`text-[7px] md:text-xs font-black uppercase tracking-[0.1em] pb-4 md:pb-10 border-b border-slate-100 mb-4 md:mb-8 pr-2 ${day === currentDay ? 'text-orange-500 underline underline-offset-[10px] decoration-2' : 'text-slate-400'}`}>{day.slice(0, 3)}</h1>
                             {timeSlots.map((slot, i) => {
                                 const s = timetable.find(t => t.day === day && t.timeSlot === slot);
                                 const isLive = day === currentDay && stats.currentClass?.timeSlot === slot;
                                 return (
                                     <div key={i} className={`h-12 md:h-20 rounded-md md:rounded-[2rem] border flex flex-col items-center justify-center p-0.5 md:p-4 transition-all duration-500 ${s ? (isLive ? 'bg-orange-600 border-white shadow-[0_0_20px_rgba(234,88,12,0.6)] z-20 scale-105 text-white' : 'bg-orange-50 border-orange-200 opacity-100') : 'bg-slate-50 border-transparent opacity-5'}`}>
-                                        {s ? (<><p className={`text-[5px] md:text-[10px] font-black uppercase italic truncate w-full text-center leading-none pr-1 ${isLive ? 'text-white' : 'text-orange-600'}`}>{s.subject}</p><div className={`mt-0.5 md:mt-2 px-1 py-0 rounded-[2px] md:rounded text-[4px] md:text-[8px] font-black ${isLive ? 'bg-white text-orange-600' : 'bg-orange-600 text-white'}`}>{s.batch}</div></>) : <span className="text-[5px] opacity-10 italic pr-1">VOID</span>}
+                                        {s ? (<><p className={`text-[5px] md:text-[10px] font-black uppercase italic truncate w-full text-center leading-none pr-1 ${isLive ? 'text-white' : 'text-orange-600'}`}>{s.subject}</p><div className={`mt-0.5 md:mt-2 px-1 py-0 rounded-[2px] md:rounded text-[4px] md:text-[8px] font-black ${isLive ? 'bg-white text-orange-600' : 'bg-orange-600 text-white'}`}>{s.batch}</div></>) : <span className="text-[5px] opacity-10 italic pr-2">VOID</span>}
                                     </div>
                                 )
                             })}
@@ -251,43 +262,44 @@ const TeacherDashboard = () => {
           </motion.div>
         )}
 
+        {/* TAB 3: STATS */}
         {activeTab === 'stats' && (
           <motion.div key="stats" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-6 text-left">
             <div className="bg-white p-6 md:p-12 rounded-[2.5rem] md:rounded-[4rem] border border-slate-100 shadow-2xl">
                 <div className="flex items-center gap-5 mb-10 border-l-4 border-orange-600 pl-6">
                    <BarChart3 className="text-orange-600" size={32}/>
                    <div>
-                     <h3 className="text-2xl font-black uppercase italic text-slate-900 leading-none pr-4">Load Analytics</h3>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest pr-2">Monthly Conductance Hub • {currentMonthName}</p>
+                     <h3 className="text-2xl font-black uppercase italic text-slate-900 leading-none pr-8">Load Analytics</h3>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest pr-4">Monthly Conductance Hub • {currentMonthName}</p>
                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-8">
                         <div className="space-y-3">
-                           <p className="text-[11px] font-black uppercase text-slate-500 tracking-widest flex justify-between pr-2">Work Efficiency <span>{stats.conductanceRatio}%</span></p>
+                           <p className="text-[11px] font-black uppercase text-slate-500 tracking-widest flex justify-between pr-4">Work Efficiency <span>{stats.conductanceRatio}%</span></p>
                            <div className="relative h-4 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                                <motion.div initial={{ width: 0 }} animate={{ width: `${stats.conductanceRatio}%` }} className="absolute top-0 left-0 h-full bg-orange-600 shadow-lg" />
                            </div>
                         </div>
                         <div className="flex justify-between p-8 bg-[#020617] rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
                            <div className="text-center flex-1 border-r border-white/5">
-                              <p className="text-[9px] font-black text-slate-500 uppercase pr-1">Monthly Target</p>
-                              <p className="text-3xl font-black italic mt-1 pr-2">{stats.monthlyTarget}</p>
+                              <p className="text-[9px] font-black text-slate-500 uppercase pr-2">Monthly Target</p>
+                              <p className="text-3xl font-black italic mt-1 pr-4">{stats.monthlyTarget}</p>
                            </div>
                            <div className="text-center flex-1">
-                              <p className="text-[9px] font-black text-orange-500 uppercase pr-1">Actual Sessions</p>
-                              <p className="text-3xl font-black italic mt-1 pr-2">{stats.conducted}</p>
+                              <p className="text-[9px] font-black text-orange-500 uppercase pr-2">Actual Sessions</p>
+                              <p className="text-3xl font-black italic mt-1 pr-4">{stats.conducted}</p>
                            </div>
                            <Zap className="absolute bottom-[-10%] right-[-10%] opacity-5" size={100}/>
                         </div>
                     </div>
 
                     <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 relative group">
-                        <p className="text-[11px] font-black uppercase text-slate-400 mb-6 flex items-center gap-2 pr-2"><Globe size={16} className="text-blue-500"/> Subject Expertise</p>
+                        <p className="text-[11px] font-black uppercase text-slate-400 mb-6 flex items-center gap-2 pr-4"><Globe size={16} className="text-blue-500"/> Subject Expertise</p>
                         <div className="flex flex-wrap gap-2">
                            {facultyData?.expertise?.map((sub, i) => (
-                             <span key={i} className="bg-white px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-slate-200 text-slate-700 shadow-sm flex items-center gap-2 hover:border-orange-500 transition-all cursor-default pr-2">{sub}</span>
+                             <span key={i} className="bg-white px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-slate-200 text-slate-700 shadow-sm hover:border-orange-500 transition-all cursor-default pr-4 italic">{sub}</span>
                            ))}
                         </div>
                     </div>
@@ -295,18 +307,18 @@ const TeacherDashboard = () => {
 
                 <div className="mt-12 space-y-6">
                    <div className="flex items-center gap-4 opacity-40">
-                     <p className="text-[11px] font-black uppercase italic flex items-center gap-2 pr-2"><History size={16}/> Class History</p>
+                     <p className="text-[11px] font-black uppercase italic flex items-center gap-2 pr-6"><History size={16}/> Class History</p>
                      <div className="flex-1 h-[1px] bg-slate-200" />
                    </div>
                    <div className="grid grid-cols-1 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scroll">
-                      {timetable.length === 0 ? <p className="py-10 text-center text-slate-300 font-black uppercase text-[10px] pr-2">No activity found</p> : 
+                      {timetable.length === 0 ? <p className="py-10 text-center text-slate-300 font-black uppercase text-[10px] pr-4 italic">No activity nodes found</p> : 
                         timetable.map((cls, i) => (
                          <div key={i} className="p-6 bg-white border border-slate-100 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-4 hover:shadow-lg transition-all group">
-                            <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-6 text-left">
                                 <div className="text-center bg-slate-50 p-2 rounded-xl border border-slate-200 min-w-[70px]"><p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter pr-1">{cls.day.slice(0,3)}</p></div>
-                                <div className="text-left"><p className="text-lg font-black text-slate-900 uppercase italic leading-none pr-4">{cls.subject}</p><p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest flex items-center gap-2 pr-2"><MapPin size={10} className="text-red-500"/> Unit {cls.room} • <Zap size={10} className="text-orange-500"/> Batch {cls.batch}</p></div>
+                                <div className="text-left"><p className="text-lg font-black text-slate-900 uppercase italic leading-none pr-8">{cls.subject}</p><p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest flex items-center gap-2 pr-4"><MapPin size={10} className="text-red-500"/> Unit {cls.room} • <Zap size={10} className="text-orange-500"/> Batch {cls.batch}</p></div>
                             </div>
-                            <div className="flex items-center gap-4"><CheckCircle size={18} className="text-emerald-500"/><span className="text-[10px] font-black text-emerald-600 uppercase pr-1">Completed</span></div>
+                            <div className="flex items-center gap-4"><CheckCircle size={18} className="text-emerald-500"/><span className="text-[10px] font-black text-emerald-600 uppercase pr-2">Synchronized</span></div>
                          </div>
                         ))
                       }
@@ -319,7 +331,7 @@ const TeacherDashboard = () => {
       </AnimatePresence>
 
       <div className="pt-10 flex justify-center items-center gap-6 opacity-20 italic">
-          <div className="flex items-center gap-2 text-slate-400"><ShieldCheck size={14} className="text-orange-600"/><p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.5em] pr-2">Identity Secured •</p></div>
+          <div className="flex items-center gap-2 text-slate-400"><ShieldCheck size={14} className="text-orange-600"/><p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.5em] pr-6">Identity Secured • Neural Sync Active</p></div>
       </div>
     </div>
   );

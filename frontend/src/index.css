@@ -29,3 +29,16 @@
 .custom-scroll-dark::-webkit-scrollbar-track {
   background: #020617; /* Dark background track */
 }
+
+/* Sabhi animated elements ko smooth karne ke liye */
+* {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+/* Scroll smoothness */
+.custom-scroll-dark {
+  -webkit-overflow-scrolling: touch;
+}

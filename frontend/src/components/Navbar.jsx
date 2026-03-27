@@ -15,7 +15,7 @@ const Navbar = () => {
   const userRole = (localStorage.getItem('role') || 'GUEST').toUpperCase();
   const seenKey = `lastReadCount_${userEmail}`;
 
-  // 1. INDIVIDUAL NOTIFICATION LOGIC (Student 1/2 Sync)
+  // 1. INDIVIDUAL NOTIFICATION LOGIC
   const checkNewMessages = useCallback(async () => {
     try {
       const res = await API.get('/messages');
@@ -26,9 +26,10 @@ const Navbar = () => {
   }, [seenKey]);
 
   useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
+    // Smoothness Fix: Clock updates every 1 minute to prevent heavy re-renders
+    const t = setInterval(() => setTime(new Date()), 60000); 
     checkNewMessages();
-    const m = setInterval(checkNewMessages, 5000); 
+    const m = setInterval(checkNewMessages, 15000); // Messages checked every 15s
     return () => { clearInterval(t); clearInterval(m); };
   }, [checkNewMessages]);
 
@@ -51,17 +52,15 @@ const Navbar = () => {
   // Time & Date Formats
   const dayName = time.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
   const dateFormatted = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-  const timeFormatted = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const timeFormatted = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const mobileTime = `${dayName}, ${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 
   return (
     <>
-      {/* Laptop par h-24 sizing taaki 'Bada' dikhe */}
-      <nav className="h-20 lg:h-24 sticky top-0 z-[60] px-4 md:px-10 flex items-center justify-between bg-[#020617]/95 backdrop-blur-3xl border-b border-white/5 shadow-[0_10px_50px_rgba(0,0,0,0.5)] font-['Outfit'] transition-all">
+      <nav className="h-20 lg:h-24 sticky top-0 z-[60] px-4 md:px-10 flex items-center justify-between bg-[#020617]/95 backdrop-blur-3xl border-b border-white/5 shadow-[0_10px_50px_rgba(0,0,0,0.5)] font-['Outfit'] transition-all transform-gpu">
         
         {/* LEFT: PREMIUM IDENTITY SECTION */}
-        <div className="flex items-center gap-4 pl-14 md:pl-0">
-          {/* Cyber Red Line Accent */}
+        <div className="flex items-center gap-4 pl-14 md:pl-0 transform-gpu">
           <div className="w-[2px] h-8 lg:h-12 bg-gradient-to-b from-red-600 to-transparent hidden md:block opacity-60" />
           
           <div className="flex flex-col text-left leading-none">
@@ -73,15 +72,15 @@ const Navbar = () => {
             </motion.p>
             <motion.h1 
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-              className="text-xl md:text-3xl lg:text-5xl font-black text-white uppercase italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]"
+              className="text-xl md:text-3xl lg:text-5xl font-black text-white uppercase italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] pr-6"
             >
               {userName}
-              <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-red-600 ml-1"></motion.span>
+              <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-red-600 ml-1">_</motion.span>
             </motion.h1>
           </div>
         </div>
 
-        {/* CENTER: HIGH-TECH CLOCK NODE (Bada Sizing for Laptop) */}
+        {/* CENTER: HIGH-TECH CLOCK NODE (Laptop Scale) */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="hidden md:flex items-center gap-4 lg:gap-10 bg-white/[0.03] px-8 lg:px-12 py-3 lg:py-4 rounded-full border border-white/5 shadow-inner"
@@ -102,14 +101,13 @@ const Navbar = () => {
         </motion.div>
 
         {/* RIGHT: NOTIFICATIONS & PROFILE */}
-        <div className="flex items-center gap-4 lg:gap-10">
+        <div className="flex items-center gap-4 lg:gap-10 transform-gpu">
           
-          {/* Mobile Only Compact Time */}
           <div className="flex md:hidden flex-col items-end mr-1 text-white">
              <span className="text-[11px] font-black tracking-tighter uppercase leading-none">{mobileTime}</span>
           </div>
 
-          {/* NOTIFICATION BELL (Animated) */}
+          {/* BELL ICON */}
           <motion.div 
             whileHover={{ scale: 1.2, rotate: 15 }} whileTap={{ scale: 0.9 }}
             onClick={handleOpenNotifications}
@@ -128,11 +126,10 @@ const Navbar = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* 🌟 PROFILE AVATAR (Orbit Animation) 🌟 */}
-          <div onClick={() => setIsProfileOpen(true)} className="relative cursor-pointer group">
-            {/* Spinning Orbit Ring */}
+          {/* PROFILE AVATAR */}
+          <div onClick={() => setIsProfileOpen(true)} className="relative cursor-pointer group transform-gpu">
             <motion.div 
-              animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              animate={{ rotate: 360 }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
               className="absolute -inset-2 lg:-inset-3 border-2 border-dashed border-red-600/20 rounded-full group-hover:border-red-600/50"
             />
             
@@ -141,29 +138,24 @@ const Navbar = () => {
                     {userName.charAt(0)}
                 </div>
                 <div className="hidden sm:block text-left overflow-hidden">
-                   <p className="text-[7px] lg:text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">Welcome</p>
+                   <p className="text-[7px] lg:text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">NODE_ACCESS</p>
                    <div className="flex items-center gap-1 lg:gap-2">
                       <span className="text-[10px] lg:text-sm font-black text-white uppercase italic tracking-widest">SYSTEM</span>
                       <ChevronDown size={14} className="text-slate-500 group-hover:translate-y-0.5 transition-transform" />
                    </div>
                 </div>
             </div>
-            {/* Online Pulse Dot */}
             <div className="absolute bottom-1 right-1 w-3.5 h-3.5 lg:w-5 lg:h-5 bg-emerald-500 border-2 border-[#020617] rounded-full z-20 shadow-lg" />
           </div>
 
         </div>
       </nav>
 
-      {/* --- PROFILE MODAL (Full Functional) --- */}
+      {/* --- PROFILE MODAL --- */}
       <AnimatePresence>
         {isProfileOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-             <motion.div 
-               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-               className="absolute inset-0 bg-black/80 backdrop-blur-md" 
-               onClick={() => setIsProfileOpen(false)} 
-             />
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsProfileOpen(false)} />
              <motion.div 
                initial={{ scale: 0.8, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 50 }}
                className="bg-[#050505] w-full max-w-[380px] rounded-[4rem] p-12 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)] relative border border-white/5 text-white"
@@ -172,14 +164,15 @@ const Navbar = () => {
                 <div className="w-24 h-24 bg-red-600 rounded-[2.5rem] mx-auto mb-8 flex items-center justify-center text-white text-5xl font-black italic shadow-[0_0_40px_rgba(220,38,38,0.4)] border-4 border-white/5">
                   {userName.charAt(0)}
                 </div>
-                <h3 className="text-3xl font-black uppercase italic leading-none mb-2">{userName}</h3>
-                                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 flex items-center gap-4 text-xs font-bold text-slate-400 truncate mb-10">
+                <h3 className="text-3xl font-black uppercase italic leading-none mb-2 pr-4">{userName}</h3>
+                <p className="text-xs font-black text-red-500 uppercase tracking-[0.4em] mb-10 italic">Secure Uplink: Stable</p>
+                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 flex items-center gap-4 text-xs font-bold text-slate-400 truncate mb-10">
                     <Mail size={20} className="text-red-600 flex-shrink-0"/> {userEmail}
                 </div>
-                <div className="pt-6 border-t border-white/5 flex items-center justify-center gap-3 text-emerald-500/60 font-black uppercase text-[10px] tracking-[0.3em]">
-                   <ShieldCheck size={16}/> Identity_Verified.
+                <div className="pt-6 border-t border-white/5 flex items-center justify-center gap-3 text-emerald-500/60 font-black uppercase text-[10px] tracking-[0.3em] pr-2">
+                   <ShieldCheck size={16}/> Identity_Verified
                 </div>
-                <button onClick={() => setIsProfileOpen(false)} className="mt-10 text-slate-600 hover:text-white transition-all text-xs font-black uppercase tracking-[0.5em] underline underline-offset-8">Close Card</button>
+                <button onClick={() => setIsProfileOpen(false)} className="mt-10 text-slate-600 hover:text-white transition-all text-xs font-black uppercase tracking-[0.5em] underline underline-offset-8">Close Matrix</button>
              </motion.div>
           </div>
         )}
