@@ -564,15 +564,15 @@ const HODDashboard = () => {
           <motion.div key="broadcast" initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full flex flex-col gap-6 max-w-7xl mx-auto w-full text-slate-800 px-2">
              <div className="flex justify-between items-center bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm">
                 <button onClick={() => setView('main')} className="flex items-center gap-2 text-slate-400 hover:text-red-500 font-black uppercase text-[10px] tracking-widest transition-all pr-2"><ArrowLeft size={16}/> HUB</button>
-                <h1 className="text-[8px] md:text-xs font-black uppercase italic tracking-widest flex items-center gap-2 truncate text-slate-600 pr-4"><Globe size={16} className="text-red-600 flex-shrink-0"/> Transmission Terminal</h1>
+                <h1 className="text-[8px] md:text-xs font-black uppercase italic tracking-widest flex items-center gap-2 truncate text-slate-600 pr-4"><Globe size={16} className="text-red-600 flex-shrink-0"/>Messenger</h1>
                 <X size={20} className="text-slate-500 hover:text-red-500 cursor-pointer flex-shrink-0" onClick={() => setView('main')}/>
              </div>
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 text-left">
                 <div className="bg-[#0a0a0c] p-6 md:p-10 rounded-2xl md:rounded-3xl border border-slate-800 text-center shadow-2xl">
-                    <Megaphone className="text-red-600 animate-bounce mb-4 mx-auto" size={32}/><textarea className="w-full p-4 md:p-6 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-[10px] md:text-xs outline-none h-32 md:h-40 text-red-500 font-bold" placeholder="Transmit data..." value={msgContent} onChange={e => setMsgContent(e.target.value)} /><button onClick={sendBroadcast} className="w-full bg-red-600 py-4 rounded-xl text-[10px] font-black uppercase mt-4 flex items-center justify-center gap-3 italic text-white"><Send size={16}/> Dispatch</button>
+                    <Megaphone className="text-red-600 animate-bounce mb-4 mx-auto" size={32}/><textarea className="w-full p-4 md:p-6 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-[10px] md:text-xs outline-none h-32 md:h-40 text-red-500 font-bold" placeholder="Type Message..." value={msgContent} onChange={e => setMsgContent(e.target.value)} /><button onClick={sendBroadcast} className="w-full bg-red-600 py-4 rounded-xl text-[10px] font-black uppercase mt-4 flex items-center justify-center gap-3 italic text-white"><Send size={16}/> Send</button>
                 </div>
                 <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 md:p-8 overflow-y-auto max-h-[400px] md:max-h-[500px] shadow-xl space-y-4">
-                    <h2 className="text-[10px] md:text-xs font-black uppercase italic border-b border-slate-100 pb-4 flex items-center gap-2 text-slate-400 pr-4"><History size={16} className="text-red-600"/> Signal Registry</h2>
+                    <h2 className="text-[10px] md:text-xs font-black uppercase italic border-b border-slate-100 pb-4 flex items-center gap-2 text-slate-400 pr-4"><History size={16} className="text-red-600"/> Message History</h2>
                     {messages.map((m, i) => (
                       <div key={i} className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center group hover:border-red-600/30 transition-all">
                          <div className="overflow-hidden"><p className="text-[8px] md:text-[10px] font-black text-red-600 uppercase italic truncate leading-none mb-1 pr-2">{m.senderName}</p><p className="text-[10px] md:text-xs font-bold text-slate-600 truncate pr-4">{m.content}</p></div>

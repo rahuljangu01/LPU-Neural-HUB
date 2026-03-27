@@ -18,6 +18,7 @@ const TeacherDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [facultyData, setFacultyData] = useState(null);
   const [activeTab, setActiveTab] = useState('today'); 
+  const [isZoomed, setIsZoomed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [reminder, setReminder] = useState(null); 
   const [lastNotifiedId, setLastNotifiedId] = useState(null);
@@ -120,7 +121,7 @@ const TeacherDashboard = () => {
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#f8fafc] gap-4">
         <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-['Outfit'] pr-4">Syncing Matrix...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-['Outfit'] pr-4">Loading...</p>
     </div>
   );
 
@@ -230,15 +231,24 @@ const TeacherDashboard = () => {
              <div className="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-100 pb-8 gap-4">
                 <div className="text-center md:text-left">
                   <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-1 pr-8">Weekly Classes</h3>
-                  <p className="text-[9px] md:text-[10px] text-orange-600 font-black uppercase tracking-[0.8em] pr-4">Matrix Node v4.5</p>
                 </div>
-                <button onClick={handleExport} className="w-full md:w-auto bg-[#020617] text-white hover:bg-orange-600 px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all italic flex items-center justify-center gap-4 shadow-xl pr-4">
-                  <Download size={18} /> Dawnlaod
+                <div className="flex gap-2 w-full md:w-auto">
+                {/* 🔍 Naya Zoom Toggle Button */}
+                <button 
+                    onClick={() => setIsZoomed(!isZoomed)} 
+                    className={`flex-1 md:flex-none px-5 py-3 rounded-xl text-[10px] font-black uppercase italic transition-all flex items-center justify-center gap-2 shadow-lg ${isZoomed ? 'bg-red-600 text-white' : 'bg-white/10 text-slate-400'}`}
+                >
+                    {isZoomed ? 'Exit Zoom' : 'Zoom Matrix'}
                 </button>
+
+                <button onClick={handleExport} className="flex-1 md:flex-none bg-white/5 hover:bg-white text-slate-400 hover:text-black border border-white/10 px-5 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-2xl">
+                    <Download size={18}/> DAWNLAOD
+                </button>
+            </div>
              </div>
              
-             <div className="w-full overflow-hidden text-center">
-                <div className="grid grid-cols-7 gap-1 md:gap-5 w-full">
+             <div className={`w-full ${isZoomed ? 'overflow-x-auto overflow-y-hidden cursor-move' : 'overflow-hidden'}`}>
+              <div className={`grid grid-cols-7 gap-1 md:gap-5 transition-all duration-500 ${isZoomed ? 'min-w-[1000px] py-10 scale-110' : 'w-full'}`}>
                     <div className="col-span-1 space-y-2 md:space-y-4 pt-10 md:pt-24 text-right pr-2 border-r border-slate-100">
                         {timeSlots.map(s => <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-400 uppercase italic tracking-tighter pr-2">{s.split(' - ')[0]}</div>)}
                     </div>
@@ -311,14 +321,14 @@ const TeacherDashboard = () => {
                      <div className="flex-1 h-[1px] bg-slate-200" />
                    </div>
                    <div className="grid grid-cols-1 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scroll">
-                      {timetable.length === 0 ? <p className="py-10 text-center text-slate-300 font-black uppercase text-[10px] pr-4 italic">No activity nodes found</p> : 
+                      {timetable.length === 0 ? <p className="py-10 text-center text-slate-300 font-black uppercase text-[10px] pr-4 italic">No activity found</p> : 
                         timetable.map((cls, i) => (
                          <div key={i} className="p-6 bg-white border border-slate-100 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-4 hover:shadow-lg transition-all group">
                             <div className="flex items-center gap-6 text-left">
                                 <div className="text-center bg-slate-50 p-2 rounded-xl border border-slate-200 min-w-[70px]"><p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter pr-1">{cls.day.slice(0,3)}</p></div>
                                 <div className="text-left"><p className="text-lg font-black text-slate-900 uppercase italic leading-none pr-8">{cls.subject}</p><p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest flex items-center gap-2 pr-4"><MapPin size={10} className="text-red-500"/> Unit {cls.room} • <Zap size={10} className="text-orange-500"/> Batch {cls.batch}</p></div>
                             </div>
-                            <div className="flex items-center gap-4"><CheckCircle size={18} className="text-emerald-500"/><span className="text-[10px] font-black text-emerald-600 uppercase pr-2">Synchronized</span></div>
+                            <div className="flex items-center gap-4"><CheckCircle size={18} className="text-emerald-500"/><span className="text-[10px] font-black text-emerald-600 uppercase pr-2">Done</span></div>
                          </div>
                         ))
                       }

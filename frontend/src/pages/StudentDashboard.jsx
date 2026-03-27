@@ -16,6 +16,7 @@ const StudentDashboard = () => {
   const [timetable, setTimetable] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('today'); 
+  const [isZoomed, setIsZoomed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [reminder, setReminder] = useState(null); 
   const [lastNotifiedId, setLastNotifiedId] = useState(null);
@@ -249,13 +250,23 @@ const StudentDashboard = () => {
                 <div className="text-center md:text-left">
                     <h3 className="text-2xl md:text-4xl font-black uppercase italic tracking-tighter mb-1 leading-none pr-8 text-white">WEEKLY TIMETABLE</h3>
                 </div>
-                <button onClick={handleExport} className="w-full md:w-auto bg-white/5 hover:bg-white text-slate-400 hover:text-black border border-white/10 px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase transition-all italic flex items-center justify-center gap-4 shadow-2xl group pr-4">
+                <div className="flex gap-2 w-full md:w-auto">
+                {/* 🔍 Naya Zoom Toggle Button */}
+                <button 
+                    onClick={() => setIsZoomed(!isZoomed)} 
+                    className={`flex-1 md:flex-none px-5 py-3 rounded-xl text-[10px] font-black uppercase italic transition-all flex items-center justify-center gap-2 shadow-lg ${isZoomed ? 'bg-red-600 text-white' : 'bg-white/10 text-slate-400'}`}
+                >
+                    {isZoomed ? 'Exit Zoom' : 'Zoom Matrix'}
+                </button>
+
+                <button onClick={handleExport} className="flex-1 md:flex-none bg-white/5 hover:bg-white text-slate-400 hover:text-black border border-white/10 px-5 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-2xl">
                     <Download size={18}/> DAWNLAOD
                 </button>
+            </div>
              </div>
              
-             <div className="w-full overflow-hidden">
-                <div className="grid grid-cols-7 gap-1 md:gap-5 w-full">
+             <div className={`w-full ${isZoomed ? 'overflow-x-auto overflow-y-hidden cursor-move' : 'overflow-hidden'}`}>
+              <div className={`grid grid-cols-7 gap-1 md:gap-5 transition-all duration-500 ${isZoomed ? 'min-w-[1000px] py-10 scale-110' : 'w-full'}`}>
                     <div className="col-span-1 space-y-2 md:space-y-4 pt-12 md:pt-24 text-right pr-2 border-r border-white/5">
                         {timeSlots.map(s => <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[6px] md:text-[11px] font-black text-slate-600 uppercase italic tracking-tighter pr-4">{s.split(' - ')[0]}</div>)}
                     </div>
@@ -287,7 +298,6 @@ const StudentDashboard = () => {
 
       <div className="pt-10 pb-6 flex justify-center items-center gap-6 opacity-20 italic">
           <div className="flex items-center gap-2"><ShieldCheck size={14} className="text-orange-600"/><p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.5em] pr-4">Identity Secured</p></div>
-          <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.8em] pr-4">v2.4 Stable Sync</p>
       </div>
     </div>
   );
