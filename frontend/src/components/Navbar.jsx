@@ -1,21 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Clock, Calendar, Mail, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Bell, Clock, Calendar, Mail, ChevronDown, ShieldCheck, LogOut, KeyRound, Eye, EyeOff, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationPanel from './NotificationPanel';
 import API from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { successToast, errorAlert } from '../services/alertService';
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [time, setTime] = useState(new Date());
   const [unreadCount, setUnreadCount] = useState(0);
 
   const userEmail = localStorage.getItem('userEmail') || 'guest';
   const userName = (localStorage.getItem('userName') || 'User').split(' ')[0];
   const userRole = (localStorage.getItem('role') || 'GUEST').toUpperCase();
+  const userUid = localStorage.getItem('userUid') || '00000';
   const seenKey = `lastReadCount_${userEmail}`;
 
-  // 1. INDIVIDUAL NOTIFICATION LOGIC
   const checkNewMessages = useCallback(async () => {
     try {
       const res = await API.get('/messages');
@@ -26,10 +36,9 @@ const Navbar = () => {
   }, [seenKey]);
 
   useEffect(() => {
-    // Smoothness Fix: Clock updates every 1 minute to prevent heavy re-renders
     const t = setInterval(() => setTime(new Date()), 60000); 
     checkNewMessages();
-    const m = setInterval(checkNewMessages, 15000); // Messages checked every 15s
+    const m = setInterval(checkNewMessages, 15000);
     return () => { clearInterval(t); clearInterval(m); };
   }, [checkNewMessages]);
 
@@ -42,143 +51,465 @@ const Navbar = () => {
     } catch (err) { }
   };
 
-  const getGreeting = () => {
-    const h = time.getHours();
-    if (h < 12) return "GOOD MORNING";
-    if (h < 17) return "GOOD AFTERNOON";
-    return "GOOD EVENING";
+  const handleLogout = () => {
+    setShowLogoutModal(false);
+    setTimeout(() => {
+      localStorage.clear();
+      navigate('/');
+    }, 300);
   };
 
-  // Time & Date Formats
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errorAlert("Error", "New passwords do not match!");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      errorAlert("Error", "Password must be at least 6 characters!");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await API.post('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      successToast("Password changed successfully!");
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordModal(false);
+      setIsDropdownOpen(false);
+    } catch (err) {
+      const msg = err.response?.data?.msg || "Failed to change password";
+      errorAlert("Error", msg);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const getGreeting = () => {
+    const h = time.getHours();
+    if (h < 12) return "Good Morning";
+    if (h < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
   const dayName = time.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
   const dateFormatted = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   const timeFormatted = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const mobileTime = `${dayName}, ${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 
+  const roleColors = {
+    'ADMIN': 'from-red-500 to-rose-600',
+    'HOD': 'from-purple-500 to-violet-600',
+    'FACULTY': 'from-orange-500 to-amber-500',
+    'STUDENT': 'from-cyan-500 to-teal-500',
+    'GUEST': 'from-slate-500 to-gray-500'
+  };
+
+  const roleColor = roleColors[userRole] || roleColors['GUEST'];
+
   return (
     <>
-      <nav className="h-20 lg:h-24 sticky top-0 z-[60] px-4 md:px-10 flex items-center justify-between bg-[#020617]/95 backdrop-blur-3xl border-b border-white/5 shadow-[0_10px_50px_rgba(0,0,0,0.5)] font-['Outfit'] transition-all transform-gpu">
+      <nav className="h-14 sm:h-16 md:h-20 sticky top-0 z-[60] px-3 sm:px-4 md:px-8 flex items-center justify-between bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 backdrop-blur-xl border-b border-slate-700/50 shadow-lg font-['Outfit']">
         
-        {/* LEFT: PREMIUM IDENTITY SECTION */}
-        <div className="flex items-center gap-4 pl-14 md:pl-0 transform-gpu">
-          <div className="w-[2px] h-8 lg:h-12 bg-gradient-to-b from-red-600 to-transparent hidden md:block opacity-60" />
+        {/* LEFT: IDENTITY SECTION */}
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 pl-10 sm:pl-0">
+          <div className="w-1 h-6 sm:h-8 md:h-10 bg-gradient-to-b from-orange-500 via-red-500 to-rose-500 rounded-full shadow-lg shadow-red-500/30"/>
           
-          <div className="flex flex-col text-left leading-none">
+          <div className="flex flex-col text-left leading-none min-w-0">
             <motion.p 
-              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 0.8, x: 0 }}
-              className="text-[8px] md:text-[10px] lg:text-xs font-black text-red-500 tracking-[0.5em] uppercase italic mb-1.5 md:mb-2"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-[8px] sm:text-[9px] md:text-xs font-bold text-orange-400 tracking-widest uppercase"
             >
               {getGreeting()}
             </motion.p>
             <motion.h1 
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-              className="text-xl md:text-3xl lg:text-5xl font-black text-white uppercase italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] pr-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-base sm:text-lg md:text-2xl lg:text-3xl font-black text-white tracking-tight"
             >
               {userName}
-              <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ duration: 1.5, repeat: Infinity }} className="text-red-600 ml-1">_</motion.span>
+              <motion.span 
+                animate={{ opacity: [0, 1, 0] }} 
+                transition={{ duration: 1.5, repeat: Infinity }} 
+                className="text-orange-500 ml-0.5"
+              >
+                _
+              </motion.span>
             </motion.h1>
           </div>
         </div>
 
-        {/* CENTER: HIGH-TECH CLOCK NODE (Laptop Scale) */}
+        {/* CENTER: CLOCK NODE - Hidden on mobile */}
         <motion.div 
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="hidden md:flex items-center gap-4 lg:gap-10 bg-white/[0.03] px-8 lg:px-12 py-3 lg:py-4 rounded-full border border-white/5 shadow-inner"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="hidden xl:flex items-center gap-6 bg-slate-700/50 backdrop-blur-sm px-6 py-2.5 rounded-2xl border border-slate-600/50"
         >
-           <div className="flex items-center gap-3 border-r border-white/10 pr-8 lg:pr-12">
-              <Calendar size={18} className="text-red-600 opacity-60" />
-              <div className="flex flex-col text-left leading-none">
-                 <span className="text-[10px] lg:text-xs font-black text-white tracking-widest">{dayName}</span>
-                 <span className="text-[8px] lg:text-[10px] font-bold text-slate-500 mt-1">{dateFormatted}</span>
-              </div>
-           </div>
-           <div className="flex items-center gap-4">
-              <Clock size={20} className="text-red-600 animate-pulse" />
-              <span className="text-sm lg:text-2xl font-black text-white tabular-nums tracking-[0.2em]">
-                {timeFormatted}
-              </span>
-           </div>
+          <div className="flex items-center gap-2 border-r border-slate-600 pr-5">
+            <Calendar size={16} className="text-orange-500" />
+            <div className="flex flex-col text-left leading-none">
+              <span className="text-xs font-bold text-white tracking-widest">{dayName}</span>
+              <span className="text-[10px] text-slate-400 mt-0.5">{dateFormatted}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock size={18} className="text-orange-500" />
+            <span className="text-lg font-bold text-white tracking-widest tabular-nums">
+              {timeFormatted}
+            </span>
+          </div>
         </motion.div>
 
         {/* RIGHT: NOTIFICATIONS & PROFILE */}
-        <div className="flex items-center gap-4 lg:gap-10 transform-gpu">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           
-          <div className="flex md:hidden flex-col items-end mr-1 text-white">
-             <span className="text-[11px] font-black tracking-tighter uppercase leading-none">{mobileTime}</span>
+          {/* Mobile Time */}
+          <div className="flex xl:hidden flex-col items-end text-slate-400 min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase">{mobileTime}</span>
           </div>
 
-          {/* BELL ICON */}
-          <motion.div 
-            whileHover={{ scale: 1.2, rotate: 15 }} whileTap={{ scale: 0.9 }}
+          {/* Bell Icon */}
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleOpenNotifications}
-            className="relative p-2 lg:p-3 cursor-pointer group"
+            className="relative p-2 rounded-xl bg-slate-700/50 hover:bg-slate-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
-            <Bell size={24} className={`${unreadCount > 0 ? 'text-red-500 animate-bounce' : 'text-slate-500'} lg:w-8 lg:h-8 transition-colors group-hover:text-red-500`} />
+            <Bell size={20} className={unreadCount > 0 ? 'text-orange-500' : 'text-slate-500'} />
             <AnimatePresence>
               {unreadCount > 0 && (
                 <motion.span 
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  className="absolute top-1 right-1 bg-red-600 text-white text-[9px] lg:text-[11px] font-black w-4.5 h-4.5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full shadow-[0_0_20px_red] ring-2 ring-[#020617]"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-red-500 to-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg border-2 border-white"
                 >
-                  {unreadCount}
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </motion.span>
               )}
             </AnimatePresence>
-          </motion.div>
+          </motion.button>
 
-          {/* PROFILE AVATAR */}
-          <div onClick={() => setIsProfileOpen(true)} className="relative cursor-pointer group transform-gpu">
-            <motion.div 
-              animate={{ rotate: 360 }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="absolute -inset-2 lg:-inset-3 border-2 border-dashed border-red-600/20 rounded-full group-hover:border-red-600/50"
-            />
-            
-            <div className="relative flex items-center gap-4 bg-white/5 border border-white/10 p-1 pr-4 lg:pr-8 rounded-full group-hover:bg-white/10 transition-all">
-                <div className="w-10 h-10 lg:w-16 lg:h-16 bg-gradient-to-br from-red-600 to-red-900 rounded-full flex items-center justify-center text-white font-black text-sm lg:text-2xl italic border-2 border-[#020617] shadow-2xl overflow-hidden">
-                    {userName.charAt(0)}
+          {/* Profile Avatar */}
+          <div className="relative">
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 bg-slate-700/50 hover:bg-slate-600 border border-slate-600/50 rounded-full pl-1 pr-3 py-1 transition-all min-h-[44px]"
+            >
+              <div className="relative">
+                <div className={`w-9 h-9 md:w-11 md:h-11 bg-gradient-to-br ${roleColor} rounded-full flex items-center justify-center text-white font-black text-base md:text-xl shadow-lg`}>
+                  {userName.charAt(0)}
                 </div>
-                <div className="hidden sm:block text-left overflow-hidden">
-                   <p className="text-[7px] lg:text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">NODE_ACCESS</p>
-                   <div className="flex items-center gap-1 lg:gap-2">
-                      <span className="text-[10px] lg:text-sm font-black text-white uppercase italic tracking-widest">SYSTEM</span>
-                      <ChevronDown size={14} className="text-slate-500 group-hover:translate-y-0.5 transition-transform" />
-                   </div>
-                </div>
-            </div>
-            <div className="absolute bottom-1 right-1 w-3.5 h-3.5 lg:w-5 lg:h-5 bg-emerald-500 border-2 border-[#020617] rounded-full z-20 shadow-lg" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 md:w-4 md:h-4 bg-emerald-500 rounded-full border-2 border-white"/>
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-[8px] md:text-[9px] font-bold text-orange-400 uppercase tracking-wider">Access</p>
+                <p className="text-[10px] md:text-sm font-black text-white -mt-0.5">{userRole}</p>
+              </div>
+              <ChevronDown size={12} className={`text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}/>
+            </motion.button>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}/>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200/50 overflow-hidden z-50"
+                  >
+                    <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 bg-gradient-to-br ${roleColor} rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg`}>
+                          {userName.charAt(0)}
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="font-bold text-slate-800 truncate">{userName}</p>
+                          <p className="text-xs text-orange-500 font-medium truncate">{userRole} • #{userUid}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-2">
+                      <button 
+                        onClick={() => { setIsProfileOpen(true); setIsDropdownOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-slate-700 transition-all min-h-[44px]"
+                      >
+                        <span className="w-5 h-5 flex items-center justify-center text-orange-500"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></span>
+                        <span className="font-medium text-sm">View Profile</span>
+                      </button>
+                      <button 
+                        onClick={() => { setShowPasswordModal(true); setIsDropdownOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 text-slate-700 transition-all min-h-[44px]"
+                      >
+                        <KeyRound size={18} className="text-orange-500"/>
+                        <span className="font-medium text-sm">Change Password</span>
+                      </button>
+                    </div>
+
+                    <div className="p-2 border-t border-slate-100">
+                      <button 
+                        onClick={() => { setShowLogoutModal(true); setIsDropdownOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 transition-all min-h-[44px]"
+                      >
+                        <LogOut size={18} />
+                        <span className="font-medium text-sm">Logout</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
-
         </div>
       </nav>
 
-      {/* --- PROFILE MODAL --- */}
+      {/* PROFILE MODAL */}
       <AnimatePresence>
         {isProfileOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsProfileOpen(false)} />
-             <motion.div 
-               initial={{ scale: 0.8, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 50 }}
-               className="bg-[#050505] w-full max-w-[380px] rounded-[4rem] p-12 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)] relative border border-white/5 text-white"
-             >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent" />
-                <div className="w-24 h-24 bg-red-600 rounded-[2.5rem] mx-auto mb-8 flex items-center justify-center text-white text-5xl font-black italic shadow-[0_0_40px_rgba(220,38,38,0.4)] border-4 border-white/5">
-                  {userName.charAt(0)}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-black/60 backdrop-blur-md" 
+              onClick={() => setIsProfileOpen(false)} 
+            />
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0, y: 50 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              className="relative bg-gradient-to-br from-slate-800 to-slate-900 w-full max-w-sm sm:max-w-md rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/10"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500"/>
+              
+              <button 
+                onClick={() => setIsProfileOpen(false)} 
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 bg-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/20 transition-all z-10 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4 sm:mb-6">
+                  <div className={`w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br ${roleColor} rounded-2xl sm:rounded-3xl flex items-center justify-center text-4xl sm:text-5xl font-black shadow-xl`}>
+                    {userName.charAt(0)}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 sm:w-9 sm:h-9 bg-emerald-500 rounded-full flex items-center justify-center border-4 border-slate-800">
+                    <ShieldCheck size={16} className="text-white"/>
+                  </div>
                 </div>
-                <h3 className="text-3xl font-black uppercase italic leading-none mb-2 pr-4">{userName}</h3>
-                <p className="text-xs font-black text-red-500 uppercase tracking-[0.4em] mb-10 italic">Secure Uplink: Stable</p>
-                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 flex items-center gap-4 text-xs font-bold text-slate-400 truncate mb-10">
-                    <Mail size={20} className="text-red-600 flex-shrink-0"/> {userEmail}
+
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">{userName}</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className={`px-3 py-1 bg-gradient-to-r ${roleColor} text-white text-xs font-bold rounded-full uppercase tracking-wider`}>
+                    {userRole}
+                  </span>
+                  <span className="text-orange-400 font-bold text-sm">#{userUid}</span>
                 </div>
-                <div className="pt-6 border-t border-white/5 flex items-center justify-center gap-3 text-emerald-500/60 font-black uppercase text-[10px] tracking-[0.3em] pr-2">
-                   <ShieldCheck size={16}/> Identity_Verified
+
+                <div className="w-full space-y-3 mt-4">
+                  <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <Mail className="text-orange-400 flex-shrink-0" size={20}/>
+                    <span className="text-slate-300 text-sm font-medium truncate">{userEmail}</span>
+                  </div>
                 </div>
-                <button onClick={() => setIsProfileOpen(false)} className="mt-10 text-slate-600 hover:text-white transition-all text-xs font-black uppercase tracking-[0.5em] underline underline-offset-8">Close Matrix</button>
-             </motion.div>
+
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest">
+                  <ShieldCheck size={16}/> Identity Verified
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full">
+                  <button 
+                    onClick={() => { setShowPasswordModal(true); setIsProfileOpen(false); }}
+                    className="w-full px-6 py-3.5 bg-orange-500/20 border border-orange-500/30 text-orange-400 rounded-xl font-semibold text-sm hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <KeyRound size={18}/> Change Password
+                  </button>
+                  <button 
+                    onClick={() => { setShowLogoutModal(true); setIsProfileOpen(false); }}
+                    className="w-full px-6 py-3.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl font-semibold text-sm hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
 
       <NotificationPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+
+      {/* LOGOUT CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[3000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-gradient-to-br from-slate-800 to-slate-900 w-full max-w-sm rounded-3xl p-8 border border-white/10 shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <LogOut className="text-red-500" size={32}/>
+              </div>
+              
+              <h2 className="text-xl font-bold text-white text-center mb-2">Logout Confirmation</h2>
+              <p className="text-slate-400 text-sm text-center mb-8">Are you sure you want to logout from Neural HUB?</p>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowLogoutModal(false)}
+                  className="flex-1 py-3.5 bg-white/5 text-white rounded-xl font-semibold hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="flex-1 py-3.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl font-semibold shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transition-all"
+                >
+                  Logout
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* PASSWORD CHANGE MODAL */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPasswordModal(false)} 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md bg-gradient-to-br from-slate-800 to-slate-900 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 border border-white/10 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${roleColor} rounded-xl flex items-center justify-center shadow-lg`}>
+                    <KeyRound size={24} className="text-white"/>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-lg">Change Password</h3>
+                    <p className="text-slate-400 text-sm">Update your account password</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowPasswordModal(false)} 
+                  className="p-2 bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18}/>
+                    <input 
+                      type={showCurrentPassword ? "text" : "password"}
+                      placeholder="Enter current password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                      className="w-full p-4 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-orange-500 text-sm"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                    >
+                      {showCurrentPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18}/>
+                    <input 
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                      className="w-full p-4 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-orange-500 text-sm"
+                      required
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                    >
+                      {showNewPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18}/>
+                    <input 
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                      className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-orange-500 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="flex-1 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button 
+                    type="submit"
+                    disabled={changingPassword}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    {changingPassword ? (
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"/>
+                    ) : (
+                      <>Update Password</>
+                    )}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

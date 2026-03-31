@@ -1,225 +1,453 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { 
-  Home, Users, LogOut, LayoutGrid,
-  Activity, Megaphone, ShieldCheck, Menu, X,
-  Layers, BookOpen, Calendar, Zap, Clock, Signal
+  Home, Users, LayoutGrid,
+  Activity, Menu, X,
+  Layers, BookOpen, Calendar, Clock, ChevronRight, Send, MessageSquare, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from '../services/api';
+import { successToast, errorAlert } from '../services/alertService';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false); 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showMessenger, setShowMessenger] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const role = (localStorage.getItem('role') || 'student').toLowerCase();
-  const userName = localStorage.getItem('userName') || 'User';
 
   useEffect(() => { setIsOpen(false); }, [location.pathname]);
 
-  // 🎯 Logout Logic: Memory preserve karne ke liye pura clear nahi karenge
-  const handleLogout = () => {
-    const sessionKeys = ['token', 'role', 'userName', 'userEmail', 'userDept', 'userBatch'];
-    sessionKeys.forEach(key => localStorage.removeItem(key));
-    navigate('/');
+  const fetchMessages = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/messages');
+      setMessages(res.data);
+    } catch (err) { console.error("Sync Error"); }
+    finally { setLoading(false); }
+  };
+
+  const handleOpenMessenger = () => {
+    setShowMessenger(true);
+    fetchMessages();
+  };
+
+  const handleSendBroadcast = async (e) => {
+    e?.preventDefault();
+    if (!broadcastMsg.trim()) return;
+    setSending(true);
+    try {
+      await API.post('/messages', { 
+        senderName: localStorage.getItem('userName'), 
+        senderRole: localStorage.getItem('role')?.toUpperCase(), 
+        content: broadcastMsg 
+      });
+      successToast("Message Sent!");
+      setBroadcastMsg('');
+      fetchMessages();
+    } catch (err) { 
+      errorAlert("Failed", "Transmission error."); 
+    } finally { 
+      setSending(false); 
+    }
+  };
+
+  const handleDeleteMessage = async (id) => {
+    try {
+      await API.delete(`/messages/${id}`);
+      successToast("Message Deleted");
+      fetchMessages();
+    } catch (err) { 
+      errorAlert("Failed", "Could not delete."); 
+    }
   };
 
   const menuItems = {
     admin: [
       { name: 'DashBoard', icon: <Home size={18}/>, path: '/admin' },
-      { name: 'Users List', icon: <Users size={18}/>, path: '/admin/users' },
-      { name: 'Class Room', icon: <Layers size={18}/>, path: '/admin/rooms' },
-      { name: 'Subject', icon: <BookOpen size={18}/>, path: '/admin/subjects' },
-      { name: 'Batch ', icon: <LayoutGrid size={18}/>, path: '/admin/batches' },
-      { name: 'Messenger', icon: <Signal size={18}/>, path: '/admin/broadcast' },
+      { name: 'Users', icon: <Users size={18}/>, path: '/admin/users' },
+      { name: 'Rooms', icon: <Layers size={18}/>, path: '/admin/rooms' },
+      { name: 'Subjects', icon: <BookOpen size={18}/>, path: '/admin/subjects' },
+      { name: 'Batches', icon: <LayoutGrid size={18}/>, path: '/admin/batches' },
     ],
     hod: [
-      { name: 'DashBaord', icon: <Activity size={18}/>, path: '/hod' },
-      { name: 'Messenger', icon: <Megaphone size={18}/>, path: '/hod/broadcast' },
+      { name: 'DashBoard', icon: <Activity size={18}/>, path: '/hod' },
     ],
     student: [
       { name: 'DashBoard', icon: <Calendar size={18}/>, path: '/student' },
     ],
     faculty: [
       { name: 'DashBoard', icon: <Clock size={18}/>, path: '/faculty' },
-      // Load Analytics Removed as requested
     ]
   };
 
+  const role = localStorage.getItem('role') || 'student';
+  const isAdminOrHod = role === 'admin' || role === 'hod';
+  const userName = localStorage.getItem('userName') || 'User';
   const navLinks = menuItems[role] || [];
   const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // --- Futuristic Animation Variants ---
+  const roleColors = {
+    admin: 'from-red-500 to-rose-600',
+    hod: 'from-orange-500 to-red-500',
+    faculty: 'from-purple-500 to-pink-500',
+    student: 'from-cyan-500 to-teal-500'
+  };
+  const roleColor = roleColors[role] || roleColors.student;
+
   const sidebarVariants = {
-    open: { x: 0, transition: { type: "spring", stiffness: 200, damping: 25 } },
-    closed: { x: -300, transition: { type: "spring", stiffness: 200, damping: 25 } }
-  };
-
-  const containerVariants = {
-    open: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
-    closed: { transition: { staggerChildren: 0.05, staggerDirection: -1 } }
-  };
-
-  const itemVariants = {
-    open: { x: 0, opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } },
-    closed: { x: -20, opacity: 0, scale: 0.95, transition: { duration: 0.2 } }
+    open: { x: 0, transition: { type: "spring", stiffness: 250, damping: 30 } },
+    closed: { x: -320, transition: { type: "spring", stiffness: 250, damping: 30 } }
   };
 
   return (
     <>
-      {/* 🍔 MOBILE BURGER BUTTON */}
-      <div className="lg:hidden fixed top-5 left-4 z-[2000]">
-
+      {/* MOBILE HAMBURGER */}
+      <div className="lg:hidden fixed top-4 left-4 z-[2000]">
         <motion.button 
-          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(!isOpen)}
-          className="bg-[#020617] border border-red-500/30 p-2.5 rounded-xl text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+          className="bg-gradient-to-br from-slate-800 to-slate-900 backdrop-blur-xl border border-white/10 p-3 rounded-2xl text-white shadow-xl"
         >
-          <AnimatePresence mode="wait">
-            {isOpen ? (
-              <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-                <X size={22}/>
-              </motion.div>
-            ) : (
-              <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-                <Menu size={22}/>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isOpen ? <X size={22}/> : <Menu size={22}/>}
         </motion.button>
       </div>
 
-      {/* 🌑 DIM OVERLAY */}
+      {/* OVERLAY */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)} 
-            className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[90]"
+            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000]"
           />
         )}
       </AnimatePresence>
 
-      {/* 💻 SIDEBAR MAIN CONTAINER */}
+      {/* SIDEBAR */}
       <motion.div 
         variants={sidebarVariants}
         initial="closed"
         animate={isOpen || window.innerWidth >= 1024 ? "open" : "closed"}
-        /* 🚀 FIX: z-[1001] ensures it stays above everything, and 'fixed top-0 left-0' is strictly enforced */
-        className="h-full fixed left-0 top-0 z-[1001] flex flex-col bg-[#020617] border-r border-white/5 font-['Outfit'] shadow-[20px_0_50px_rgba(0,0,0,0.3)] w-72 lg:w-64 xl:w-72 overflow-hidden"
+        className="h-screen fixed left-0 top-0 z-[1001] flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 backdrop-blur-xl border-r border-white/10 font-['Outfit'] w-72 overflow-hidden shadow-2xl"
       >
+        {/* Animated Glow Effects */}
+        <motion.div 
+          animate={{ 
+            opacity: [0.15, 0.25, 0.15],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-0 left-0 w-40 h-40 bg-gradient-to-br from-orange-500/20 to-transparent rounded-full blur-3xl pointer-events-none"
+        />
+        <motion.div 
+          animate={{ 
+            opacity: [0.1, 0.2, 0.1],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-20 right-0 w-32 h-32 bg-gradient-to-tl from-rose-500/10 to-transparent rounded-full blur-2xl pointer-events-none"
+        />
+
         {/* LOGO SECTION */}
-        <div className="p-8 text-center border-b border-white/5 relative overflow-hidden">
-           <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative z-10">
-              <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">
-                 LPU Neural <span className="text-red-600 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">HUB</span>
-              </h2>
-              <p className="text-[7px] font-black uppercase tracking-[0.4em] text-slate-600 mt-1 italic">AI time table scheduler</p>
-           </motion.div>
-           <div className="absolute -top-10 -left-10 w-32 h-32 bg-red-600/5 blur-3xl rounded-full" />
-        </div>
-
-        {/* USER PROFILE BOX */}
-        <div className="px-6 py-8">
-            <motion.div 
-                whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
-                className="flex items-center gap-4 p-4 bg-white/[0.03] rounded-[2rem] border border-white/10 transition-all shadow-inner"
-            >
-                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-950 rounded-2xl flex items-center justify-center font-black italic shadow-lg text-white ring-2 ring-red-600/20">
-                    {getInitials(userName)}
-                </div>
-                <div className="flex-1 overflow-hidden text-left">
-                    <p className="text-[11px] font-black text-white uppercase italic tracking-tighter truncate">{userName}</p>
-                    <p className="text-[8px] font-bold text-red-500 uppercase tracking-widest">{role}</p>
-                </div>
-            </motion.div>
-        </div>
-
-        {/* 📋 NAVIGATION LINKS (STAGGERED ANIMATION) */}
-              <motion.nav 
-                  variants={containerVariants}
-                  className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scroll pb-10 h-full"
+        <div className="p-6 border-b border-white/10 shrink-0 relative">
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center gap-3"
+          >
+            <div>
+              <motion.h2 
+                animate={{ 
+                  textShadow: [
+                    "0 0 10px rgba(249, 115, 22, 0)",
+                    "0 0 20px rgba(249, 115, 22, 0.5)",
+                    "0 0 10px rgba(249, 115, 22, 0)"
+                  ]
+                }}
+                transition={{ duration: 3, repeat: Infinity }}
+                whileHover={{ x: 3 }}
+                className="text-xl font-black text-white tracking-tight"
               >
-          {navLinks.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <motion.div key={item.name} variants={itemVariants}>
-                <Link 
-                  to={item.path}
-                  className={`relative group flex items-center p-4 rounded-2xl transition-all duration-300 overflow-hidden
-                    ${isActive ? 'text-white' : 'text-slate-500 hover:text-white'}`}
+                <motion.span
+                  animate={{ color: ["#ffffff", "#f97316", "#ffffff"] }}
+                  transition={{ duration: 4, repeat: Infinity }}
                 >
-                  {/* Background Active Glow Logic */}
-                  {isActive && (
-                    <motion.div 
-                        layoutId="navBackground"
-                        className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-red-600/5 to-transparent border-l-4 border-red-600 z-0" 
-                    />
-                  )}
-                  
-                  <span className={`relative z-10 transition-transform duration-300 ${isActive ? 'text-red-500' : 'group-hover:scale-125'}`}>
-                    {item.icon}
-                  </span>
-                  <span className="relative z-10 ml-4 font-black text-[10px] uppercase tracking-widest italic leading-none">
-                    {item.name}
-                  </span>
-                  
-                  {isActive && (
-                    <motion.div 
-                        initial={{ scale: 0 }} 
-                        animate={{ scale: 1 }} 
-                        className="ml-auto relative z-10"
-                    >
-                        <Zap size={12} className="text-red-500 fill-red-500 animate-pulse" />
-                    </motion.div>
-                  )}
-                </Link>
+                  LPU
+                </motion.span>
+                <motion.span
+                  animate={{ color: ["#f97316", "#ffffff", "#f97316"] }}
+                  transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
+                >
+                  {' '}Neural HUB
+                </motion.span>
+              </motion.h2>
+              <motion.div 
+                className="flex items-center gap-2"
+              >
+                <motion.p 
+                  animate={{ opacity: [0.6, 1, 0.6], y: [0, -2, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-[10px] text-orange-400 font-medium uppercase tracking-widest"
+                >
+                  Smart Scheduler
+                </motion.p>
+                <motion.div 
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="w-1.5 h-1.5 bg-orange-500 rounded-full"
+                />
               </motion.div>
-            );
-          })}
-        </motion.nav>
+            </div>
+          </motion.div>
+        </div>
 
-        {/* 🚪 TERMINATE SESSION ACTION */}
-        <div className="p-6 mt-auto border-t border-white/5 bg-[#010411]">
-            <motion.button 
-              whileHover={{ scale: 1.02, backgroundColor: "#dc2626", color: "#fff" }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowLogoutModal(true)}
-              className="w-full flex items-center justify-center gap-3 p-4 bg-red-600/10 border border-red-600/20 rounded-2xl text-red-500 transition-all font-black uppercase text-[10px] italic tracking-widest shadow-lg"
+        {/* USER PROFILE */}
+        <div className="p-4 shrink-0 relative">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center gap-3 p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-orange-500/30 transition-all cursor-pointer"
+          >
+            <motion.div 
+              animate={{ 
+                boxShadow: [
+                  "0 0 0 0 rgba(249, 115, 22, 0)",
+                  "0 0 20px 5px rgba(249, 115, 22, 0.3)",
+                  "0 0 0 0 rgba(249, 115, 22, 0)"
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className={`w-12 h-12 bg-gradient-to-br ${roleColor} rounded-xl flex items-center justify-center font-black text-white text-lg shadow-lg`}
             >
-               <LogOut size={16} /> Logout
+              {getInitials(userName)}
+            </motion.div>
+            <div className="flex-1 overflow-hidden">
+              <motion.p 
+                whileHover={{ x: 2 }}
+                className="font-bold text-white text-sm truncate"
+              >
+                {userName}
+              </motion.p>
+              <motion.p 
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="text-xs text-orange-400 font-medium uppercase"
+              >
+                {role}
+              </motion.p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* NAVIGATION */}
+        <nav className="flex-1 px-3 py-2 overflow-y-auto custom-scroll">
+          <div className="space-y-1">
+            {navLinks.map((item, index) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <motion.div
+                  key={item.name}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Link 
+                    to={item.path}
+                    className={`relative group flex items-center gap-3 p-4 rounded-xl transition-all duration-300 ${isActive ? 'text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    {isActive && (
+                      <>
+                        <motion.div 
+                          layoutId="navBg" 
+                          className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-red-500/20 border-l-4 border-orange-500 rounded-xl" 
+                        />
+                        <motion.div 
+                          animate={{ height: [24, 32, 24] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-gradient-to-b from-orange-500 to-red-500 rounded-full"
+                        />
+                      </>
+                    )}
+                    <motion.span 
+                      whileHover={{ scale: 1.1 }}
+                      className={`relative z-10 ${isActive ? 'text-orange-400' : 'group-hover:text-orange-400'}`}
+                    >
+                      {item.icon}
+                    </motion.span>
+                    <span className="relative z-10 font-semibold text-sm">{item.name}</span>
+                    {isActive && (
+                      <motion.div 
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="relative z-10 ml-auto"
+                      >
+                        <ChevronRight className="text-orange-400" size={16}/>
+                      </motion.div>
+                    )}
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* MESSENGER BUTTON (Admin & HOD only) */}
+        {isAdminOrHod && (
+          <div className="px-3 py-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleOpenMessenger}
+              className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/30 hover:border-orange-500 rounded-xl text-orange-400 hover:text-white transition-all"
+            >
+              <MessageSquare size={18}/>
+              <span className="font-semibold text-sm">Messenger</span>
             </motion.button>
+          </div>
+        )}
+
+        {/* FOOTER */}
+        <div className="p-4 border-t border-white/10 shrink-0 bg-slate-900/50 relative">
+          <motion.div 
+            animate={{ opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 3, repeat: Infinity }}
+            className="text-center"
+          >
+            <p className="text-[10px] text-slate-500 font-medium">LPU Neural HUB v4.5</p>
+          </motion.div>
         </div>
       </motion.div>
 
-      {/* 🚀 ANIMATED LOGOUT MODAL */}
+      {/* MESSENGER MODAL - Mobile Responsive */}
       <AnimatePresence>
-        {showLogoutModal && (
-          <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[150] flex items-center justify-center p-6 text-white font-['Outfit']">
+        {showMessenger && (
+          <>
             <motion.div 
-                initial={{ scale: 0.8, opacity: 0, y: 20 }} 
-                animate={{ scale: 1, opacity: 1, y: 0 }} 
-                exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                className="bg-[#050505] max-w-sm w-full rounded-[4rem] p-12 text-center border border-red-900/30 shadow-[0_0_50px_rgba(239,68,68,0.15)] relative overflow-hidden"
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMessenger(false)} 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000]"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:left-0 lg:left-72 h-[85vh] sm:h-screen w-full sm:w-[400px] lg:w-[450px] z-[2001] flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 sm:border-l sm:border-white/10 shadow-2xl rounded-t-3xl sm:rounded-none"
             >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent shadow-[0_0_20px_red]" />
-                <ShieldCheck size={48} className="text-red-600 mx-auto mb-6 animate-pulse" />
-                <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-4 leading-none">Logout?</h2>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-10 italic">This will finalize current session data.</p>
-                <div className="flex gap-4">
-                    <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-4 text-[9px] font-black uppercase text-slate-500 hover:text-white transition-colors tracking-widest">Cancle</button>
-                    <button 
-                        onClick={handleLogout} 
-                        className="flex-1 py-4 bg-red-600 text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-red-900/40 tracking-widest font-black"
-                    >
-                        Confirm
-                    </button>
+              {/* Drag Handle - Mobile Only */}
+              <div className="sm:hidden flex justify-center pt-3 pb-2 shrink-0">
+                <div className="w-10 h-1 bg-white/20 rounded-full"/>
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center"
+                  >
+                    <MessageSquare size={20} className="text-white"/>
+                  </motion.div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Messenger</h3>
+                    <p className="text-slate-400 text-xs">{messages.length} messages</p>
+                  </div>
                 </div>
+                <button 
+                  onClick={() => setShowMessenger(false)} 
+                  className="p-2 bg-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/20 transition-all min-w-[36px] min-h-[36px] flex items-center justify-center"
+                >
+                  <X size={18}/>
+                </button>
+              </div>
+
+              {/* Messages List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full"/>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                    <MessageSquare size={32} className="text-slate-600 mb-3"/>
+                    <p className="text-slate-400 font-semibold text-sm">No messages</p>
+                    <p className="text-slate-500 text-xs mt-1">Send a message below</p>
+                  </div>
+                ) : (
+                  messages.map((m) => (
+                    <motion.div
+                      key={m._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-slate-800/80 p-3 rounded-xl border border-white/5 relative group hover:border-orange-500/30 transition-all"
+                    >
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-orange-500 to-red-500 rounded-l-xl"/>
+
+                      <div className="flex items-start gap-3 pl-3">
+                        <div className={`w-8 h-8 bg-gradient-to-br ${roleColors[m.senderRole?.toLowerCase()] || roleColors.student} rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0`}>
+                          {m.senderName?.charAt(0) || 'U'}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-white text-xs">{m.senderName}</span>
+                            <span className={`text-[8px] px-1.5 py-0.5 bg-gradient-to-r ${roleColors[m.senderRole?.toLowerCase()] || roleColors.student} rounded text-white font-bold uppercase`}>
+                              {m.senderRole}
+                            </span>
+                          </div>
+                          <p className="text-slate-300 text-xs leading-relaxed break-words">{m.content}</p>
+                          <p className="text-slate-500 text-[10px] mt-1">{new Date(m.createdAt).toLocaleString()}</p>
+                        </div>
+
+                        <motion.button
+                          initial={{ opacity: 0 }}
+                          whileHover={{ scale: 1.1 }}
+                          onClick={() => handleDeleteMessage(m._id)}
+                          className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all shrink-0"
+                        >
+                          <Trash2 size={12}/>
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+
+              {/* Send Message Form */}
+              <div className="p-4 border-t border-white/10 shrink-0">
+                <form onSubmit={handleSendBroadcast} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={broadcastMsg}
+                    onChange={(e) => setBroadcastMsg(e.target.value)}
+                    className="flex-1 p-3 bg-white/10 border border-white/10 rounded-lg text-white text-sm outline-none focus:border-orange-500 placeholder:text-slate-500"
+                  />
+                  <motion.button
+                    type="submit"
+                    disabled={sending || !broadcastMsg.trim()}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white disabled:opacity-50 transition-all flex items-center justify-center shadow-lg shadow-orange-500/20"
+                  >
+                    {sending ? (
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"/>
+                    ) : (
+                      <Send size={16}/>
+                    )}
+                  </motion.button>
+                </form>
+              </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
     </>

@@ -9,7 +9,7 @@ exports.generateAITimetable = async (req, res) => {
         // 1. Data Fetching
         const rooms = await Room.find();
         
-        // FIX: Teacher filter hata diya taaki generic names (Teacher 1, etc.) block na hon
+        // Generic names block na hon isliye filter hata diya
         const allFaculties = await User.find({ 
             role: { $in: ['faculty', 'hod'] },
             name: { $ne: '' } 
@@ -41,6 +41,7 @@ exports.generateAITimetable = async (req, res) => {
                         batchName: b.name, 
                         studentCount: b.studentCount,
                         subjectName: sub.name, 
+                        subjectCode: sub.code, // 👈 CourseCode ke liye save kiya
                         subjectType: sub.type || 'Theory',
                         remainingHours: sub.weeklyHours,
                         dept: b.department
@@ -60,7 +61,6 @@ exports.generateAITimetable = async (req, res) => {
                     const targetSlot = fixedSlots[task.subjectName];
                     
                     if (targetSlot && targetSlot !== "none") {
-                        // Fixed slots ko days mein spread karo
                         for (let day of days) {
                             if (task.remainingHours <= 0) break;
 
@@ -83,9 +83,12 @@ exports.generateAITimetable = async (req, res) => {
                             if (!roomNode) continue;
 
                             optimizedSchedule.push({
-                                day, timeSlot: targetSlot,
+                                day,
+                                timeSlot: targetSlot,
                                 subject: task.subjectName,
+                                subjectCode: task.subjectCode, // 👈 Added
                                 facultyName: faculty.name,
+                                facultyUid: faculty.uid, // 👈 TeacherLogin ke liye
                                 room: roomNode.roomNumber,
                                 batch: task.batchName,
                                 department: task.dept
@@ -103,7 +106,7 @@ exports.generateAITimetable = async (req, res) => {
             for (let task of currentVariantTasks) {
                 let attempts = 0; 
                 
-                while (task.remainingHours > 0 && attempts < 200) { // Slightly reduced attempts for speed
+                while (task.remainingHours > 0 && attempts < 200) { 
                     let placed = false;
                     attempts++;
 
@@ -150,9 +153,12 @@ exports.generateAITimetable = async (req, res) => {
 
                             if (roomNode) {
                                 optimizedSchedule.push({
-                                    day, timeSlot: slot,
+                                    day, 
+                                    timeSlot: slot,
                                     subject: task.subjectName,
+                                    subjectCode: task.subjectCode, // 👈 Fix: Removed {type:String} logic
                                     facultyName: faculty.name,
+                                    facultyUid: faculty.uid, // 👈 Save UID for TeacherLogin
                                     room: roomNode.roomNumber,
                                     batch: task.batchName,
                                     department: task.dept

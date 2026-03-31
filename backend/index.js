@@ -21,6 +21,7 @@ const seedAdmin = async () => {
         let admin = await User.findOne({ email: adminEmail });
         if (!admin) {
             admin = new User({
+                uid: "00000",
                 name: 'System Admin',
                 email: adminEmail,
                 password: hashedPassword,

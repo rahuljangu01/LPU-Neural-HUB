@@ -25,6 +25,11 @@ const UserSchema = new mongoose.Schema({
         type: String, 
         required: true // Har user kisi dept ka hona chahiye (MCA, CSE, etc.)
     },
+    uid: { 
+        type: String, 
+        unique: true,
+        required: true
+    },
 
     // --- FACULTY / HOD PARAMETERS (AI Engine ke liye) ---
     maxWorkload: { 
@@ -44,7 +49,8 @@ const UserSchema = new mongoose.Schema({
         type: String, 
         default: '' // MCA-1, BTech-3 etc. (Student isi batch ka timetable dekhega)
     },
-
+    rollNo: { type: Number, default: 0 },
+    group: { type: String, enum: ['G1', 'G2', 'N/A'], default: 'N/A' },
     createdAt: {
         type: Date,
         default: Date.now

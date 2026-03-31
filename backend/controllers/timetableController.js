@@ -18,11 +18,12 @@ exports.addBulkSlots = async (req, res) => {
         await Timetable.deleteMany({ batch: { $in: incomingBatches } });
 
         const finalSchedule = await Promise.all(schedule.map(async (slot) => {
-            const facultyUser = await User.findOne({ name: slot.facultyName });
+            const facultyUser = await User.findOne({ uid: slot.facultyUid});
             return {
                 day: slot.day,
                 timeSlot: slot.timeSlot,
                 subject: slot.subject,
+                subjectCode: slot.subjectCode,
                 faculty: facultyUser ? facultyUser._id : null,
                 room: slot.room,
                 batch: slot.batch,
@@ -64,7 +65,7 @@ exports.checkLiveStatus = async (req, res) => {
     const { day, timeSlot } = req.query; 
     try {
         const allRooms = await Room.find();
-        const busySlots = await Timetable.find({ day, timeSlot }).populate('faculty', 'name');
+        const busySlots = await Timetable.find({ day, timeSlot }).populate('faculty', 'name uid');
 
         const availabilityData = allRooms.map(room => {
             const occupation = busySlots.find(slot => slot.room === room.roomNumber);
@@ -72,8 +73,10 @@ exports.checkLiveStatus = async (req, res) => {
                 roomNumber: room.roomNumber,
                 block: room.block,
                 capacity: room.capacity,
+                type: room.type, // 👈 Yeh line missing thi, ise add karein
                 isAvailable: !occupation,
                 facultyName: occupation && occupation.faculty ? occupation.faculty.name : null,
+                facultyUid: occupation && occupation.faculty ? occupation.faculty.uid : null,
                 subject: occupation ? occupation.subject : null
             };
         });
@@ -83,10 +86,11 @@ exports.checkLiveStatus = async (req, res) => {
     }
 };
 
-// 4. Fetch Full Timetable
+// Function 4 ko isse replace karein:
 exports.getTimetable = async (req, res) => {
     try {
-        const timetable = await Timetable.find().populate('faculty', 'name').sort({ day: 1 });
+        // Naya: 'name uid' dono fetch honge
+        const timetable = await Timetable.find().populate('faculty', 'name uid').sort({ day: 1 });
         res.json(timetable);
     } catch (err) {
         res.status(500).send('Server Error');
