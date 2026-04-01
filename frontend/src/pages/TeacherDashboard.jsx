@@ -8,8 +8,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
 import API from '../services/api';
 import { successToast, errorAlert } from '../services/alertService';
+import ZoomableTimetable from '../components/ZoomableTimetable';
 
-const timeSlots = ["09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "01:00 - 02:00", "02:00 - 03:00", "03:00 - 04:00"];
+const timeSlots = [
+  "09:00 - 10:00", 
+  "10:00 - 11:00", 
+  "11:00 - 12:00", 
+  "12:00 - 01:00",  // Lunch Break
+  "01:00 - 02:00", 
+  "02:00 - 03:00", 
+  "03:00 - 04:00", 
+  "04:00 - 05:00"
+];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const TeacherDashboard = () => {
@@ -28,9 +38,18 @@ const TeacherDashboard = () => {
 
   const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
-    let [h, m] = timeStr.trim().split(':').map(Number);
-    if (h >= 1 && h <= 7) h += 12; 
+    const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return 0;
+    let h = parseInt(match[1]);
+    let m = parseInt(match[2]);
+    // 12:00 PM is noon (no adjustment), 01:00-07:00 is morning so add 12 for PM
+    if (h === 12) h = 12; // 12:00 stays as 12 (noon)
+    else if (h >= 1 && h <= 7) h += 12; // 01:00-07:00 becomes 13:00-19:00 (PM)
     return h * 60 + m;
+  };
+
+  const isLunchBreak = (timeStr) => {
+    return timeStr === '12:00 - 01:00';
   };
 
   const fetchHubData = useCallback(async () => {
@@ -54,7 +73,7 @@ const TeacherDashboard = () => {
   }, [facultyName]);
 
   const stats = useMemo(() => {
-    const today = timetable.filter(t => t.day === currentDay);
+    const today = timetable.filter(t => t.day === currentDay && !isLunchBreak(t.timeSlot));
     const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
     
     let current = null;
@@ -65,7 +84,7 @@ const TeacherDashboard = () => {
       else if (nowMin < getMinutes(parts[0])) upcoming.push(cls);
     });
 
-    const monthlyTarget = timetable.length * 4; 
+    const monthlyTarget = today.length * 4; 
     const dayOfMonth = currentTime.getDate();
     const conductanceRatio = Math.min(Math.round((dayOfMonth / 30) * 100), 100);
     const conducted = Math.round((monthlyTarget * conductanceRatio) / 100);
@@ -204,7 +223,7 @@ const TeacherDashboard = () => {
                   animate={{ color: ["#f97316", "#ea580c", "#f97316"] }}
                   transition={{ duration: 4, repeat: Infinity }}
                 >
-                  Prof. {facultyName.split(' ')[0]}
+                  {facultyName}
                 </motion.span>
               </h1>
               <div className="flex items-center gap-3 mt-1">
@@ -430,7 +449,7 @@ const TeacherDashboard = () => {
                 </motion.button>
               </div>
               
-              <div className="overflow-x-auto">
+              <ZoomableTimetable>
                 <div className="min-w-[700px]">
                   <div className="grid grid-cols-7 gap-2 md:gap-4">
                     <div className="col-span-1 space-y-2 md:space-y-4 pt-8 md:pt-16 text-right pr-2">
@@ -441,7 +460,7 @@ const TeacherDashboard = () => {
                     {days.map(day => (
                       <div key={day} className="col-span-1 space-y-2 md:space-y-4 text-center">
                         <h1 className={`text-[10px] md:text-sm font-bold uppercase tracking-wider pb-4 md:pb-8 border-b border-white/5 mb-4 md:mb-8 ${
-                          day === currentDay ? 'text-orange-400' : 'text-slate-300'
+                          day === currentDay ? 'text-red-400' : 'text-slate-300'
                         }`}>
                           {day.slice(0, 3)}
                         </h1>
@@ -452,24 +471,32 @@ const TeacherDashboard = () => {
                             <motion.div 
                               key={i} 
                               whileHover={{ scale: 1.02 }}
-                              className={`h-12 md:h-20 rounded-lg md:rounded-xl border flex flex-col items-center justify-center p-1 md:p-3 transition-all ${
+                              className={`h-14 md:h-24 rounded-lg md:rounded-xl border flex flex-col items-center justify-center p-1 md:p-3 transition-all ${
                                 session 
                                   ? isLive 
-                                    ? 'bg-gradient-to-br from-orange-500 to-red-500 border-white shadow-lg shadow-orange-500/30' 
-                                    : 'bg-orange-500/20 border-orange-500/50'
+                                    ? 'bg-gradient-to-br from-red-500 to-rose-600 border-white shadow-lg shadow-red-500/30' 
+                                    : 'bg-red-500/20 border-red-500/50'
                                   : 'bg-white/5 border-transparent'
                               }`}
                             >
                               {session ? (
                                 <>
-                                  <p className={`text-[6px] md:text-[10px] font-bold uppercase truncate w-full leading-tight ${isLive ? 'text-white' : 'text-orange-400'}`}>
+                                  <p className={`text-[6px] md:text-[9px] font-bold uppercase truncate w-full leading-tight ${isLive ? 'text-white' : 'text-red-400'}`}>
                                     {session.subject}
                                   </p>
-                                  <div className={`mt-1 px-1.5 py-0.5 rounded text-[5px] md:text-[8px] font-bold ${
-                                    isLive ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+                                  <p className={`text-[5px] md:text-[7px] truncate w-full ${isLive ? 'text-red-200' : 'text-red-300'}`}>
+                                    {session.subjectCode}
+                                  </p>
+                                  <div className={`mt-0.5 md:mt-1 px-1 md:px-2 py-0.5 rounded text-[5px] md:text-[7px] font-bold ${
+                                    isLive ? 'bg-white text-red-600' : 'bg-red-500 text-white'
                                   }`}>
-                                    {session.batch}
+                                    R-{session.room}
                                   </div>
+                                  {session.batch && (
+                                    <p className={`text-[4px] md:text-[6px] mt-0.5 ${isLive ? 'text-white/70' : 'text-slate-400'}`}>
+                                      {session.batch}
+                                    </p>
+                                  )}
                                 </>
                               ) : (
                                 <span className="text-[5px] text-slate-600 uppercase">-</span>
@@ -481,7 +508,7 @@ const TeacherDashboard = () => {
                     ))}
                   </div>
                 </div>
-              </div>
+              </ZoomableTimetable>
             </motion.div>
           )}
 

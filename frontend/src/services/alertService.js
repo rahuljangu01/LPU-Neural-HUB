@@ -1,6 +1,6 @@
 import Swal from 'sweetalert2';
 
-// 1. Success Toast (Top Right)
+// 1. SUCCESS TOAST - Simple & Clean
 export const successToast = (msg) => {
   Swal.fire({
     toast: true,
@@ -10,64 +10,145 @@ export const successToast = (msg) => {
     showConfirmButton: false,
     timer: 3000,
     timerProgressBar: true,
-    background: '#0a0a0a',
+    background: '#0f172a',
     color: '#fff',
-    iconColor: '#ef4444', // Red icon for success too to match theme
+    customClass: {
+      popup: '!rounded-xl !shadow-2xl !border !border-emerald-500/30'
+    },
     showClass: {
-      popup: 'animate__animated animate__fadeInRight'
+      popup: 'animate__animated animate__slideInRight'
     },
     hideClass: {
-      popup: 'animate__animated animate__fadeOutRight'
+      popup: 'animate__animated animate__slideOutRight'
     }
   });
 };
 
-// 2. Error Alert (Pop up)
+// 2. ERROR ALERT - Clean Popup
 export const errorAlert = (title, msg) => {
   Swal.fire({
     icon: 'error',
-    title: `<span style="color:#fff; font-family:Outfit; font-weight:900; text-transform:uppercase italic"> ${title} </span>`,
-    text: msg,
-    background: '#0a0a0a',
-    color: '#94a3b8',
-    confirmButtonColor: '#ef4444',
-    confirmButtonText: 'OK',
+    title: `<span style="color:#fff; font-family:system-ui; font-weight:800; font-size:18px;">${title}</span>`,
+    html: `<p style="color:#94a3b8; font-weight:500;">${msg}</p>`,
+    background: '#0f172a',
+    color: '#fff',
+    confirmButtonColor: '#dc2626',
+    confirmButtonText: 'Got It',
     customClass: {
-      popup: 'rounded-[2rem] border-2 border-red-900/30 shadow-2xl',
-      confirmButton: 'rounded-xl font-black uppercase text-[10px] px-8 py-3'
+      popup: '!rounded-2xl !border !border-red-500/30 !shadow-2xl',
+      confirmButton: '!rounded-lg !font-bold !px-6 !py-2.5'
     },
     showClass: {
       popup: 'animate__animated animate__zoomIn'
+    },
+    hideClass: {
+      popup: 'animate__animated animate__zoomOut'
+    },
+    backdrop: 'rgba(0,0,0,0.7)'
+  });
+};
+
+// 3. CONFIRM DIALOG - Clean & Simple
+export const confirmDialog = async (title, text) => {
+  const result = await Swal.fire({
+    icon: 'question',
+    iconColor: '#f59e0b',
+    title: `<span style="color:#fff; font-family:system-ui; font-weight:800;">${title}</span>`,
+    html: `<p style="color:#94a3b8; font-weight:500;">${text}</p>`,
+    background: '#0f172a',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#334155',
+    confirmButtonText: 'Confirm',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    customClass: {
+      popup: '!rounded-2xl !border !border-amber-500/30 !shadow-2xl',
+      confirmButton: '!rounded-lg !font-bold !px-6 !py-2.5',
+      cancelButton: '!rounded-lg !font-bold !px-6 !py-2.5'
+    },
+    showClass: {
+      popup: 'animate__animated animate__zoomIn'
+    },
+    hideClass: {
+      popup: 'animate__animated animate__zoomOut'
+    },
+    backdrop: 'rgba(0,0,0,0.7)'
+  });
+  return result.isConfirmed;
+};
+
+// 4. INFO TOAST
+export const infoToast = (msg) => {
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'info',
+    iconColor: '#3b82f6',
+    title: msg,
+    showConfirmButton: false,
+    timer: 3500,
+    timerProgressBar: true,
+    background: '#0f172a',
+    color: '#fff',
+    customClass: {
+      popup: '!rounded-xl !shadow-2xl !border !border-blue-500/30'
+    },
+    showClass: {
+      popup: 'animate__animated animate__slideInRight'
+    },
+    hideClass: {
+      popup: 'animate__animated animate__slideOutRight'
     }
   });
 };
 
-// 3. Confirm Dialog (The Part You Needed Fixed)
-export const confirmDialog = async (title, text) => {
-  const res = await Swal.fire({
-    title: `<span style="color:#fff; font-family:Outfit; font-weight:900; text-transform:uppercase italic"> ${title} </span>`,
-    html: `<p style="color:#94a3b8; font-weight:bold; font-size:14px;">${text}</p>`,
-    icon: 'warning',
-    iconColor: '#ef4444',
-    background: '#0a0a0a',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444', // RED Button
-    cancelButtonColor: '#1e293b',  // DARK SLATE Button
-    confirmButtonText: 'YES, DO IT',
-    cancelButtonText: 'Cancle',
-    reverseButtons: true, // Cancel left, Confirm right
-    focusConfirm: false,
+// 5. WELCOME TOAST - Simple for All Users
+export const welcomeToast = (name) => {
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    iconColor: '#10b981',
+    title: `Welcome ${name}!`,
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true,
+    background: '#0f172a',
+    color: '#fff',
     customClass: {
-      popup: 'rounded-[3rem] border-2 border-red-900/20 shadow-[0_0_50px_rgba(239,68,68,0.1)]',
-      confirmButton: 'rounded-2xl font-black uppercase text-[10px] px-6 py-4 tracking-widest shadow-lg shadow-red-900/40',
-      cancelButton: 'rounded-2xl font-black uppercase text-[10px] px-6 py-4 tracking-widest'
+      popup: '!rounded-xl !shadow-2xl !border !border-emerald-500/30'
     },
     showClass: {
-      popup: 'animate__animated animate__backInDown' // Smooth entrance
+      popup: 'animate__animated animate__slideInRight'
     },
     hideClass: {
-      popup: 'animate__animated animate__backOutUp' // Smooth exit
+      popup: 'animate__animated animate__slideOutRight'
     }
   });
-  return res.isConfirmed;
+};
+
+// 6. WARNING TOAST
+export const warningToast = (msg) => {
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'warning',
+    iconColor: '#f59e0b',
+    title: msg,
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true,
+    background: '#0f172a',
+    color: '#fff',
+    customClass: {
+      popup: '!rounded-xl !shadow-2xl !border !border-amber-500/30'
+    },
+    showClass: {
+      popup: 'animate__animated animate__slideInRight'
+    },
+    hideClass: {
+      popup: 'animate__animated animate__slideOutRight'
+    }
+  });
 };

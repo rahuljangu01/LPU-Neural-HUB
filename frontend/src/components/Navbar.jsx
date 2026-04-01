@@ -21,7 +21,7 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const userEmail = localStorage.getItem('userEmail') || 'guest';
-  const userName = (localStorage.getItem('userName') || 'User').split(' ')[0];
+  const userName = localStorage.getItem('userName') || 'User';
   const userRole = (localStorage.getItem('role') || 'GUEST').toUpperCase();
   const userUid = localStorage.getItem('userUid') || '00000';
   const seenKey = `lastReadCount_${userEmail}`;

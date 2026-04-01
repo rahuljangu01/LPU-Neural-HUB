@@ -2,7 +2,7 @@ const Timetable = require('../models/Timetable');
 const Room = require('../models/Room');
 const User = require('../models/User');
 
-// 1. AI BULK DEPLOYMENT (Updated to NOT delete other batches)
+// 1. AI BULK DEPLOYMENT - COMPLETELY REPLACE old timetable
 exports.addBulkSlots = async (req, res) => {
     try {
         const { schedule } = req.body;
@@ -11,28 +11,58 @@ exports.addBulkSlots = async (req, res) => {
             return res.status(400).json({ msg: "No schedule data received from AI Engine." });
         }
 
-        // NAYA LOGIC: Pata lagao ki is naye schedule mein kaun-kaun se batches hain
-        const incomingBatches =[...new Set(schedule.map(slot => slot.batch))];
+        console.log('📥 addBulkSlots received:', {
+            count: schedule.length,
+            batches: [...new Set(schedule.map(slot => slot.batch))]
+        });
 
-        // Sirf unhi batches ka purana timetable delete karo jo abhi update ho rahe hain (Baaki safe rahenge)
-        await Timetable.deleteMany({ batch: { $in: incomingBatches } });
+        // COMPLETELY DELETE all timetable entries first
+        await Timetable.deleteMany({});
 
         const finalSchedule = await Promise.all(schedule.map(async (slot) => {
             const facultyUser = await User.findOne({ uid: slot.facultyUid});
-            return {
+            
+            // Extract G1/G2 from batch name
+            let studentGroup = 'Full Batch';
+            if (slot.batch) {
+                const batchUpper = slot.batch.toUpperCase();
+                // Check for G1 or G2 at end of batch name
+                if (batchUpper.endsWith(' G1') || batchUpper.endsWith('G1')) {
+                    studentGroup = 'G1';
+                } else if (batchUpper.endsWith(' G2') || batchUpper.endsWith('G2')) {
+                    studentGroup = 'G2';
+                }
+            }
+            
+            const entry = {
                 day: slot.day,
                 timeSlot: slot.timeSlot,
                 subject: slot.subject,
                 subjectCode: slot.subjectCode,
+                type: slot.type || 'Theory',
                 faculty: facultyUser ? facultyUser._id : null,
+                facultyUid: slot.facultyUid,
                 room: slot.room,
                 batch: slot.batch,
+                studentGroup: studentGroup,
                 department: slot.department || 'General'
             };
+            
+            return entry;
         }));
 
+        console.log('💾 Saving to DB (replacing ALL):', {
+            count: finalSchedule.length,
+            batches: [...new Set(finalSchedule.map(e => e.batch))]
+        });
+
         await Timetable.insertMany(finalSchedule);
-        res.json({ msg: '✅ Neural Matrix Deployed & Locked Successfully!' });
+        
+        // Verify the save
+        const savedCount = await Timetable.countDocuments();
+        console.log('✅ Verified - Total entries in DB:', savedCount);
+        
+        res.json({ msg: '✅ Neural Matrix Deployed & Locked Successfully!', count: finalSchedule.length, total: savedCount });
     } catch (err) {
         console.error("Bulk Deploy Error:", err.message);
         res.status(500).json({ msg: 'Deployment Logic Failure', error: err.message });
@@ -91,6 +121,13 @@ exports.getTimetable = async (req, res) => {
     try {
         // Naya: 'name uid' dono fetch honge
         const timetable = await Timetable.find().populate('faculty', 'name uid').sort({ day: 1 });
+        
+        console.log('📋 Timetable fetched from DB:', {
+            count: timetable.length,
+            batches: [...new Set(timetable.map(t => t.batch))],
+            firstEntry: timetable[0]
+        });
+        
         res.json(timetable);
     } catch (err) {
         res.status(500).send('Server Error');

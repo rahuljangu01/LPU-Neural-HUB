@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { 
@@ -12,8 +12,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import API from '../services/api';
 import { successToast, errorAlert, confirmDialog } from '../services/alertService';
+import ZoomableTimetable from '../components/ZoomableTimetable';
 
-const AdminDashboard = () => {
+const AdminDashboard = memo(() => {
   const location = useLocation();
   const path = location.pathname;
   const [loading, setLoading] = useState(false);
@@ -310,42 +311,35 @@ const AdminDashboard = () => {
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8 space-y-6 sm:space-y-8 font-['Outfit'] min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100">
 
-      {/* STATS CARDS - FULLY RESPONSIVE */}
+      {/* STATS CARDS - GPU OPTIMIZED */}
       {path === '/admin' && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
           {[
-            { l: 'Faculties', v: stats.users, i: <Briefcase size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-rose-500 to-red-600', shadow: 'shadow-rose-500/30' },
-            { l: 'Subjects', v: stats.subjects, i: <Cpu size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-violet-600 to-purple-600', shadow: 'shadow-violet-500/30' },
-            { l: 'Students', v: stats.students, i: <UserIcon size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-cyan-500 to-teal-500', shadow: 'shadow-cyan-500/30' },
-            { l: 'Rooms', v: stats.rooms, i: <DoorOpen size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-amber-500 to-orange-500', shadow: 'shadow-amber-500/30' }
+            { l: 'Faculties', v: stats.users, i: <Briefcase size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-rose-500 to-red-600', color: 'from-rose-400 to-red-500' },
+            { l: 'Subjects', v: stats.subjects, i: <Cpu size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-violet-600 to-purple-600', color: 'from-violet-400 to-purple-500' },
+            { l: 'Students', v: stats.students, i: <UserIcon size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-cyan-500 to-teal-500', color: 'from-cyan-400 to-teal-500' },
+            { l: 'Rooms', v: stats.rooms, i: <DoorOpen size={20} className="sm:w-6 sm:h-6"/>, bg: 'bg-gradient-to-br from-amber-500 to-orange-500', color: 'from-amber-400 to-orange-500' }
           ].map((s, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ scale: 1.03, y: -3 }}
-              className={`${s.bg} p-3 sm:p-4 md:p-6 lg:p-7 rounded-xl sm:rounded-2xl shadow-xl ${s.shadow} text-white relative overflow-hidden cursor-pointer`}
+            <div 
+              key={i}
+              style={{ willChange: 'transform' }}
+              className={`${s.bg} p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-xl text-white relative overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1 active:scale-[0.98]`}
             >
-              <div className="absolute top-0 right-0 w-20 sm:w-28 md:w-32 h-20 sm:h-28 md:h-32 bg-white/10 rounded-full -mr-10 sm:-mr-16 md:-mr-16 -mt-10 sm:-mt-16 md:-mt-16"/>
+              <div className={`absolute -top-10 -right-10 w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-bl ${s.color} rounded-full blur-2xl opacity-20`}/>
               <div className="relative z-10">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-white/70 sm:text-white/80 text-[10px] sm:text-xs font-bold uppercase tracking-wider">{s.l}</p>
+                    <p className="text-white/80 text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-wider">{s.l}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black mt-1">{loading ? '...' : s.v}</p>
                   </div>
-                  <div className="bg-white/20 p-2 sm:p-2.5 md:p-3 rounded-lg sm:rounded-xl backdrop-blur-sm">
+                  <div className="bg-white/20 p-2 sm:p-2.5 md:p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm">
                     {s.i}
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
       <AnimatePresence mode="wait">
@@ -353,149 +347,228 @@ const AdminDashboard = () => {
         {/* MAIN DASHBOARD */}
         {path === '/admin' && (
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8"
           >
-            {/* TEACHER MATRIX */}
-            <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
-              <div className="flex justify-between items-center mb-4 sm:mb-5 md:mb-6">
+            {/* TEACHER MATRIX - GPU OPTIMIZED */}
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500"/>
+
+              <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 mb-4 sm:mb-5 md:mb-6">
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg sm:rounded-xl flex items-center justify-center">
-                    <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600"/>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-transform duration-200 hover:scale-110"> 
+                    <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white"/>
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base md:text-lg font-bold text-slate-800">Teacher Matrix</h3>
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-800">Teacher Matrix</h3>
                     <p className="text-xs sm:text-sm text-slate-500">{filteredTeachers.length} Active</p>
                   </div>
                 </div>
-                <button onClick={fetchData} className={`p-1.5 sm:p-2 bg-slate-100 rounded-lg sm:rounded-xl text-slate-600 hover:bg-orange-100 hover:text-orange-600 transition-colors ${loading ? 'animate-spin' : ''}`}>
-                  <RefreshCcw className="w-4 h-4 sm:w-5 sm:h-5"/>
+                <button 
+                  onClick={fetchData} 
+                  className={`p-2 sm:p-2.5 bg-slate-100 rounded-xl text-slate-600 hover:bg-orange-100 hover:text-orange-600 transition-all ${loading ? 'animate-spin' : ''}`}
+                >
+                  <RefreshCcw className="w-5 h-5 sm:w-6 sm:h-6"/>
                 </button>
               </div>
 
-              {!selectedTeacher ? (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5"/>
-                    <input 
-                      className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-slate-100 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-400 focus:bg-white transition-all" 
-                      placeholder="Search teachers..." 
-                      value={teacherSearch} 
-                      onChange={(e) => setTeacherSearch(e.target.value)} 
-                    />
-                  </div>
-                  
-                  <div className="space-y-2 max-h-[180px] sm:max-h-[220px] md:max-h-[250px] overflow-y-auto">
-                    {filteredTeachers.map((t) => (
-                      <div 
-                        key={t._id} 
-                        onClick={() => setSelectedTeacher(t)} 
-                        className="p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-xl flex items-center justify-between cursor-pointer border border-slate-100 hover:border-orange-300 hover:bg-orange-50 transition-all min-h-[48px] sm:min-h-[56px]"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg sm:rounded-lg flex items-center justify-center text-white font-bold text-xs sm:text-sm">
-                            {t.name.charAt(0)}
-                          </div>
-                          <div className="text-left min-w-0">
-                            <p className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{t.name}</p>
-                            <p className="text-[10px] sm:text-xs text-slate-500 truncate">{t.email}</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 flex-shrink-0"/>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 sm:space-y-5">
-                  <div className="flex justify-between items-center bg-gradient-to-r from-orange-500 to-red-500 p-3 sm:p-4 rounded-lg sm:rounded-xl text-white">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center font-bold text-sm sm:text-base">
-                        {selectedTeacher.name.charAt(0)}
-                      </div>
-                      <span className="font-semibold text-sm sm:text-base">{selectedTeacher.name}</span>
-                    </div>
-                    <button onClick={() => setSelectedTeacher(null)} className="p-1.5 sm:p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 rotate-45"/>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Max Classes/Week</label>
+              <AnimatePresence mode="wait">
+                {!selectedTeacher ? (
+                  <div key="teacher-list" className="space-y-3 sm:space-y-4">
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5"/>
                       <input 
-                        type="number" 
-                        className="w-full p-2.5 sm:p-3 bg-slate-100 border border-slate-200 rounded-lg sm:rounded-xl text-slate-800 text-sm outline-none focus:border-orange-400 transition-all" 
-                        value={selectedTeacher.maxWorkload || ''} 
-                        onChange={e => setSelectedTeacher({...selectedTeacher, maxWorkload: e.target.value})} 
+                        className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-400 focus:bg-white transition-all" 
+                        placeholder="Search teachers..." 
+                        value={teacherSearch} 
+                        onChange={(e) => setTeacherSearch(e.target.value)} 
                       />
                     </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Avg Leaves</label>
-                      <input 
-                        type="number" 
-                        className="w-full p-2.5 sm:p-3 bg-slate-100 border border-slate-200 rounded-lg sm:rounded-xl text-slate-800 text-sm outline-none focus:border-orange-400 transition-all" 
-                        value={selectedTeacher.avgLeaves || ''} 
-                        onChange={e => setSelectedTeacher({...selectedTeacher, avgLeaves: e.target.value})} 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 sm:space-y-3">
-                    <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Expertise Areas</label>
-                    <div className="grid grid-cols-2 gap-2 max-h-[100px] sm:max-h-[120px] md:max-h-[140px] overflow-y-auto p-2 sm:p-3 bg-slate-100 rounded-lg sm:rounded-xl border border-slate-200">
-                      {subjectList.map(sub => (
-                        <label 
-                          key={sub._id}
-                          className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg border cursor-pointer transition-all text-[10px] sm:text-xs ${
-                            selectedTeacher.expertise?.includes(sub.name) 
-                              ? 'bg-orange-100 border-orange-400' 
-                              : 'bg-white border-slate-200 hover:border-slate-300'
-                          }`}
+                    
+                    {/* Teacher List */}
+                    <div className="space-y-2 max-h-[200px] sm:max-h-[250px] md:max-h-[300px] overflow-y-auto pr-1">
+                      {filteredTeachers.map((t) => (
+                        <div 
+                          key={t._id} 
+                          onClick={() => setSelectedTeacher(t)} 
+                          style={{ willChange: 'transform' }}
+                          className="p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-between cursor-pointer border-2 border-slate-100 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                         >
-                          <input 
-                            type="checkbox" 
-                            className="hidden" 
-                            checked={selectedTeacher.expertise?.includes(sub.name)} 
-                            onChange={() => toggleTeacherExpertise(selectedTeacher, sub.name)}
-                          />
-                          <span className={`font-medium truncate ${selectedTeacher.expertise?.includes(sub.name) ? 'text-orange-700' : 'text-slate-700'}`}>
-                            {sub.name}
-                          </span>
-                        </label>
+                          <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-lg transition-transform duration-200 hover:scale-110">
+                              {t.name.charAt(0)}
+                            </div>
+                            <div className="text-left min-w-0">
+                              <p className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{t.name}</p>
+                              <p className="text-[10px] sm:text-xs text-slate-500 truncate">{t.email}</p>
+                              {t.expertise && t.expertise.length > 0 && (
+                                <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-600 text-[9px] sm:text-[10px] font-semibold rounded-full">
+                                  {t.expertise.length} subjects
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1"/>
+                        </div>
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <div key="teacher-details" className="space-y-4 sm:space-y-5">
+                    <div className="flex justify-between items-center bg-gradient-to-r from-orange-500 to-red-500 p-4 sm:p-5 rounded-xl sm:rounded-2xl text-white shadow-lg">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold text-base sm:text-lg">
+                          {selectedTeacher.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm sm:text-base text-white">{selectedTeacher.name}</div>
+                          <div className="text-white/70 text-[10px] sm:text-xs">UID: {selectedTeacher.uid || 'N/A'}</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedTeacher(null)} 
+                        className="p-2 sm:p-2.5 bg-white/20 rounded-xl hover:bg-white/30 transition-all duration-200 hover:rotate-90"
+                      >
+                        <Plus className="w-5 h-5 sm:w-6 sm:h-6 rotate-45"/>
+                      </button>
+                    </div>
 
-                  <button 
-                    onClick={() => handleUpdateUserNode(selectedTeacher._id, { maxWorkload: selectedTeacher.maxWorkload, avgLeaves: selectedTeacher.avgLeaves, expertise: selectedTeacher.expertise })}
-                    className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-shadow text-xs sm:text-sm"
-                  >
-                    Update Matrix
-                  </button>
-                </div>
-              )}
-            </div>
+                    {/* Workload Inputs */}
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Max Classes/Week</label>
+                        <input 
+                          type="number" 
+                          className="w-full p-3 sm:p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-slate-800 text-sm outline-none focus:border-orange-400 transition-all" 
+                          value={selectedTeacher.maxWorkload || ''} 
+                          onChange={e => setSelectedTeacher({...selectedTeacher, maxWorkload: e.target.value})} 
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Avg Leaves</label>
+                        <input 
+                          type="number" 
+                          className="w-full p-3 sm:p-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-slate-800 text-sm outline-none focus:border-orange-400 transition-all" 
+                          value={selectedTeacher.avgLeaves || ''} 
+                          onChange={e => setSelectedTeacher({...selectedTeacher, avgLeaves: e.target.value})} 
+                        />
+                      </div>
+                    </div>
 
-            {/* STATUS CARD */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-5 sm:p-6 md:p-8 lg:p-10 rounded-xl sm:rounded-2xl shadow-xl text-white relative overflow-hidden">
-              <div className="absolute -top-16 -right-16 w-40 sm:w-52 md:w-60 h-40 sm:h-52 md:h-60 bg-white/5 rounded-full"/>
-              
-              <div className="relative z-10 flex flex-col items-center justify-center h-full py-6 sm:py-8 md:py-10">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl sm:rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl shadow-orange-500/30 mb-4 sm:mb-5 md:mb-6">
+                    {/* ASSIGNED SUBJECTS DISPLAY */}
+                    {selectedTeacher.expertise && selectedTeacher.expertise.length > 0 && (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 border-green-200">
+                        <label className="text-xs sm:text-sm font-bold text-green-600 uppercase tracking-wider flex items-center gap-2 mb-3">
+                          <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5"/>
+                          Assigned Subjects ({selectedTeacher.expertise.length})
+                        </label>
+                        <div className="flex flex-wrap gap-2 sm:gap-2.5">
+                          {selectedTeacher.expertise.map((subName) => {
+                            const subDetails = subjectList.find(s => s.name === subName);
+                            return (
+                              <span 
+                                key={subName}
+                                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-105 ${
+                                    subDetails?.type === 'Lab' 
+                                      ? 'bg-purple-100 text-purple-700 border-2 border-purple-200' 
+                                      : 'bg-orange-100 text-orange-700 border-2 border-orange-200'
+                                  }`}
+                                >
+                                  {subName}
+                                  <button 
+                                    onClick={() => toggleTeacherExpertise(selectedTeacher, subName)}
+                                    className="ml-1 hover:bg-white/50 rounded-full p-1 transition-all duration-200 hover:rotate-90"
+                                  >
+                                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 rotate-45"/>
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Subject Selection */}
+                    <div className="space-y-2 sm:space-y-3">
+                      <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                        {selectedTeacher.expertise?.length > 0 ? 'Add/Remove Subjects' : 'Select Subjects'}
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[150px] sm:max-h-[180px] md:max-h-[200px] overflow-y-auto p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl border-2 border-slate-200">
+                        {subjectList.map((sub) => (
+                          <label 
+                            key={sub._id}
+                            className={`flex items-center gap-2.5 p-2.5 sm:p-3 rounded-lg sm:rounded-xl border-2 cursor-pointer transition-all text-xs sm:text-sm ${
+                              selectedTeacher.expertise?.includes(sub.name) 
+                                ? 'bg-orange-100 border-orange-400' 
+                                : 'bg-white border-slate-200 hover:border-orange-300'
+                            }`}
+                          >
+                            <input 
+                              type="checkbox" 
+                              className="hidden" 
+                              checked={selectedTeacher.expertise?.includes(sub.name)} 
+                              onChange={() => toggleTeacherExpertise(selectedTeacher, sub.name)}
+                            />
+                            <div className="flex items-center gap-2 w-full">
+                              <motion.span 
+                                className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${sub.type === 'Lab' ? 'bg-purple-500' : 'bg-red-500'}`}
+                                animate={selectedTeacher.expertise?.includes(sub.name) ? { scale: [1, 1.3, 1] } : {}}
+                              />
+                              <span className={`font-medium truncate flex-1 ${selectedTeacher.expertise?.includes(sub.name) ? 'text-orange-700' : 'text-slate-700'}`}>
+                                {sub.name}
+                              </span>
+                              {selectedTeacher.expertise?.includes(sub.name) && (
+                                <motion.span 
+                                  initial={{ scale: 0 }}
+                                  className="text-green-500"
+                                >
+                                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5"/>
+                                </motion.span>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => handleUpdateUserNode(selectedTeacher._id, { maxWorkload: selectedTeacher.maxWorkload, avgLeaves: selectedTeacher.avgLeaves, expertise: selectedTeacher.expertise })}
+                      className="w-full py-3 sm:py-4 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500 text-white font-bold rounded-xl sm:rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl transition-all duration-200 text-xs sm:text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300"/>
+                      Update Matrix
+                    </button>
+                  </div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* STATUS CARD - GPU OPTIMIZED */}
+            <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-6 sm:p-8 md:p-10 lg:p-12 rounded-2xl sm:rounded-3xl shadow-xl text-white relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 bg-gradient-to-bl from-orange-500/20 to-transparent rounded-full"/>
+
+              <div className="relative z-10 flex flex-col items-center justify-center h-full py-8 sm:py-10 md:py-12">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl sm:rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl shadow-orange-500/30 mb-5 sm:mb-6 md:mb-8">
                   <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white"/>
                 </div>
 
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Identity Terminal</h2>
-                <p className="text-slate-400 text-xs sm:text-sm font-medium uppercase tracking-widest mb-6">System Online</p>
-                
-                <div className="flex gap-4 sm:gap-6">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 tracking-tight">Identity Terminal</h2>
+                <p className="text-slate-400 text-xs sm:text-sm md:text-base font-medium uppercase tracking-widest mb-6 sm:mb-8">System Online</p>
+
+                <div className="flex gap-4 sm:gap-6 md:gap-8">
                   {['Stable', 'Secure', 'Active'].map((status) => (
-                    <div key={status} className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-400 rounded-full animate-pulse"/>
-                      <span className="text-xs sm:text-sm font-medium text-slate-300">{status}</span>
+                    <div key={status} className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-emerald-400 rounded-full animate-pulse"/>
+                      <span className="text-xs sm:text-sm md:text-base font-medium text-slate-300">{status}</span>
                     </div>
                   ))}
                 </div>
@@ -1252,7 +1325,7 @@ const AdminDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* USER DETAILS MODAL - FULLY RESPONSIVE */}
+      {/* USER DETAILS MODAL - ANIMATED & STYLED */}
       {viewingUser && createPortal(
         <motion.div 
           initial={{ opacity: 0 }} 
@@ -1260,76 +1333,282 @@ const AdminDashboard = () => {
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
         >
-          <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
-            onClick={() => setViewingUser(null)} 
-          />
+          {/* Animated Background */}
           <motion.div 
-            initial={{ scale: 0.8, opacity: 0, y: 50 }} 
-            animate={{ scale: 1, opacity: 1, y: 0 }} 
-            exit={{ scale: 0.8, opacity: 0, y: 50 }}
-            className="relative bg-gradient-to-br from-slate-800 to-slate-900 w-full max-w-xs sm:max-w-sm md:max-w-md rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 shadow-2xl border border-white/10"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+            onClick={() => setViewingUser(null)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          />
+          
+          {/* Floating Particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-2 h-2 bg-orange-500/30 rounded-full"
+                initial={{ 
+                  x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000), 
+                  y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
+                }}
+                animate={{ 
+                  y: [null, Math.random() * -200 - 100],
+                  opacity: [0.3, 0.8, 0.3]
+                }}
+                transition={{ 
+                  duration: 3 + Math.random() * 2, 
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+              />
+            ))}
+          </div>
+
+          <motion.div 
+            initial={{ scale: 0.5, opacity: 0, y: 100, rotateX: 45 }} 
+            animate={{ scale: 1, opacity: 1, y: 0, rotateX: 0 }}
+            exit={{ scale: 0.5, opacity: 0, y: 100 }}
+            transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
+            className="relative w-full max-w-sm sm:max-w-md"
           >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500"/>
+            {/* Glow Effect */}
+            <div className={`absolute -inset-1 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500 rounded-3xl blur-xl opacity-50 ${
+              viewingUser.role === 'student' ? 'from-cyan-500 via-teal-500 to-emerald-500' : ''
+            }`}/>
             
-            <button 
-              onClick={() => setViewingUser(null)} 
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 bg-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/20 transition-all z-10 min-w-[40px] min-h-[40px] flex items-center justify-center"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {/* Main Card */}
+            <div className={`relative bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-3xl overflow-hidden shadow-2xl border border-white/10 ${
+              viewingUser.role === 'student' ? 'from-cyan-900/30 via-slate-900 to-teal-900/30' : ''
+            }`}>
+              
+              {/* Animated Top Border */}
+              <motion.div 
+                className={`h-1.5 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500 ${
+                  viewingUser.role === 'student' ? 'from-cyan-500 via-teal-500 to-emerald-500' : ''
+                }`}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+              />
 
-            <div className="flex flex-col items-center text-center">
-              <div className="relative mb-4 sm:mb-6">
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-black shadow-xl ${
-                  viewingUser.role === 'student' 
-                    ? 'bg-gradient-to-br from-cyan-500 to-teal-500' 
-                    : viewingUser.role === 'admin'
-                    ? 'bg-gradient-to-br from-red-500 to-red-600'
-                    : 'bg-gradient-to-br from-orange-500 to-red-500'
-                }`}>
-                  {viewingUser.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 bg-emerald-500 rounded-full flex items-center justify-center border-4 border-slate-800">
-                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white"/>
-                </div>
-              </div>
+              {/* Decorative Circles */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-orange-500/10 to-transparent rounded-full blur-3xl"/>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-red-500/10 to-transparent rounded-full blur-3xl"/>
+              
+              <div className="relative p-6 sm:p-8">
+                {/* Close Button */}
+                <motion.button 
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setViewingUser(null)} 
+                  className="absolute top-4 right-4 p-2.5 bg-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/20 transition-all z-10"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </motion.button>
 
-              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">{viewingUser.name}</h3>
-              <p className="text-orange-400 font-bold text-xs sm:text-sm mb-3 sm:mb-4">
-                {viewingUser.role === 'student' ? `Reg: ${viewingUser.uid || '00000'}` : `Faculty • UID: ${viewingUser.uid || '00000'}`}
-              </p>
-
-              <div className="w-full space-y-2.5 sm:space-y-3 mt-4 sm:mt-6">
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 rounded-xl border border-white/10">
-                  <Mail className="text-orange-400 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" size={18}/>
-                  <span className="text-slate-200 text-xs sm:text-sm font-medium truncate">{viewingUser.email}</span>
-                </div>
-                
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/5 rounded-xl border border-white/10">
-                  <Hash className="text-purple-400 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" size={18}/>
-                  <span className="text-slate-200 text-xs sm:text-sm font-medium uppercase">{viewingUser.department} • {viewingUser.role}</span>
-                </div>
-
-                {viewingUser.role === 'student' && viewingUser.batch && (
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                    <div className="p-3 sm:p-4 bg-white/5 rounded-xl border border-white/10 text-center">
-                      <p className="text-slate-400 text-[10px] sm:text-xs uppercase mb-1">Roll No</p>
-                      <p className="text-white text-xl sm:text-2xl font-black">{viewingUser.rollNo || '0'}</p>
+                <div className="flex flex-col items-center text-center">
+                  
+                  {/* Avatar with Glow */}
+                  <motion.div 
+                    className="relative mb-5"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 0.2, type: "spring", bounce: 0.5 }}
+                  >
+                    <motion.div 
+                      className={`absolute inset-0 rounded-3xl blur-xl opacity-50 ${
+                        viewingUser.role === 'student' ? 'bg-cyan-500' : 'bg-orange-500'
+                      }`}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                    <div className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl font-black shadow-2xl ${
+                      viewingUser.role === 'student' 
+                        ? 'bg-gradient-to-br from-cyan-500 to-teal-500' 
+                        : viewingUser.role === 'admin'
+                        ? 'bg-gradient-to-br from-red-500 to-red-600'
+                        : 'bg-gradient-to-br from-orange-500 to-red-500'
+                      }`}>
+                      {(viewingUser.name || 'U').charAt(0).toUpperCase()}
+                      {/* Pulse Ring */}
+                      <motion.div 
+                        className="absolute inset-0 rounded-2xl border-2 border-white/30"
+                        animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
                     </div>
-                    <div className="p-3 sm:p-4 bg-white/5 rounded-xl border border-white/10 text-center">
-                      <p className="text-slate-400 text-[10px] sm:text-xs uppercase mb-1">Group</p>
-                      <p className="text-orange-400 text-xl sm:text-2xl font-black">{viewingUser.group || 'N/A'}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                    {/* Status Badge */}
+                    <motion.div 
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg border-4 border-slate-800"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, type: "spring" }}
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-white"/>
+                    </motion.div>
+                  </motion.div>
 
-              <div className="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-white/10 flex items-center justify-center gap-2 text-emerald-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest">
-                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5"/> Identity Verified
-              </div>
+                  {/* Name & Role */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <motion.h3 
+                      className="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tight"
+                      animate={{ 
+                        textShadow: [
+                          "0 0 10px rgba(249,115,22,0.5)",
+                          "0 0 20px rgba(249,115,22,0.8)",
+                          "0 0 10px rgba(249,115,22,0.5)"
+                        ]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      {viewingUser.name || 'Unknown User'}
+                    </motion.h3>
+                    <motion.div 
+                      className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        viewingUser.role === 'student' 
+                          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                          : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                      }`}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4, type: "spring" }}
+                    >
+                      {viewingUser.role === 'student' ? `Reg: ${viewingUser.uid || '00000'}` : `Faculty • UID: ${viewingUser.uid || '00000'}`}
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Info Cards */}
+                  <motion.div 
+                    className="w-full space-y-3 mt-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    {/* Email */}
+                    <motion.div 
+                      className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all group"
+                      whileHover={{ scale: 1.02, borderColor: "rgba(249,115,22,0.5)" }}
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-xl flex items-center justify-center group-hover:from-orange-500/30 group-hover:to-red-500/30 transition-all">
+                        <Mail className="text-orange-400 w-5 h-5" size={20}/>
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Email</p>
+                        <p className="text-white text-sm font-medium truncate">{viewingUser.email}</p>
+                      </div>
+                    </motion.div>
+
+                    {/* Department */}
+                    <motion.div 
+                      className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all group"
+                      whileHover={{ scale: 1.02, borderColor: "rgba(168,85,247,0.5)" }}
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all">
+                        <Hash className="text-purple-400 w-5 h-5" size={20}/>
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Department</p>
+                        <p className="text-white text-sm font-medium uppercase">{viewingUser.department} • {viewingUser.role}</p>
+                      </div>
+                    </motion.div>
+
+                    {/* ASSIGNED SUBJECTS - Animated for Faculty/HOD */}
+                    {(viewingUser.role === 'faculty' || viewingUser.role === 'hod') && viewingUser.expertise && viewingUser.expertise.length > 0 && (
+                      <motion.div 
+                        className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl border border-green-500/30 backdrop-blur-sm"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <motion.div
+                            animate={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
+                          >
+                            <BookOpen className="text-green-400 w-5 h-5" size={20}/>
+                          </motion.div>
+                          <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Assigned Subjects ({viewingUser.expertise.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {viewingUser.expertise.map((subName, idx) => {
+                            const subDetails = subjectList.find(s => s.name === subName);
+                            return (
+                              <motion.span 
+                                key={idx}
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.7 + idx * 0.1 }}
+                                whileHover={{ scale: 1.1, y: -2 }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-default ${
+                                  subDetails?.type === 'Lab' 
+                                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                                    : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                }`}
+                              >
+                                {subName}
+                              </motion.span>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* No Subjects Message */}
+                    {(viewingUser.role === 'faculty' || viewingUser.role === 'hod') && (!viewingUser.expertise || viewingUser.expertise.length === 0) && (
+                      <motion.div 
+                        className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        <p className="text-slate-400 text-sm">No subjects assigned</p>
+                        <p className="text-slate-500 text-xs mt-1">Go to Teacher Matrix to assign</p>
+                      </motion.div>
+                    )}
+
+                    {/* Student Info */}
+                    {viewingUser.role === 'student' && viewingUser.batch && (
+                      <motion.div 
+                        className="grid grid-cols-2 gap-3"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
+                          <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Roll No</p>
+                          <p className="text-white text-2xl font-black">{viewingUser.rollNo || '0'}</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
+                          <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Group</p>
+                          <p className="text-cyan-400 text-2xl font-black">{viewingUser.group || 'N/A'}</p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+
+                  {/* Footer Badge */}
+                  <motion.div 
+                    className="mt-6 pt-4 border-t border-white/10 flex items-center justify-center gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <ShieldCheck className="w-5 h-5 text-emerald-400"/>
+                    </motion.div>
+                    <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Identity Verified</span>
+                  </motion.div>
+                </div>
+              </div>  
             </div>
           </motion.div>
         </motion.div>,
@@ -1337,6 +1616,7 @@ const AdminDashboard = () => {
       )}
     </div>
   );
-};
+});
 
 export default AdminDashboard;
+  

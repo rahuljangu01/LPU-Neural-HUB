@@ -5,10 +5,16 @@ exports.addSubject = async (req, res) => {
     try {
         const { name, code, weeklyHours, type, department } = req.body;
 
-        // Manual check before Mongoose check
-        const existing = await Subject.findOne({ name: name.trim() });
+        // Manual check - allow same name if type is different (Theory vs Lab)
+        const existing = await Subject.findOne({ name: name.trim(), type: type || 'Theory' });
         if (existing) {
-            return res.status(400).json({ msg: "Subject name already exists in database." });
+            return res.status(400).json({ msg: `This ${type || 'Theory'} subject already exists. Try a different name or change the type.` });
+        }
+        
+        // Also check if same code is used
+        const codeExists = await Subject.findOne({ code: code?.trim() });
+        if (codeExists) {
+            return res.status(400).json({ msg: "Subject code already exists. Use a unique code." });
         }
 
         const newSubject = new Subject({

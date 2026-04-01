@@ -7,8 +7,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
 import API from '../services/api';
 import { successToast, errorAlert } from '../services/alertService';
+import ZoomableTimetable from '../components/ZoomableTimetable';
 
-const timeSlots = ["09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "01:00 - 02:00", "02:00 - 03:00", "03:00 - 04:00"];
+const timeSlots = [
+  "09:00 - 10:00", 
+  "10:00 - 11:00", 
+  "11:00 - 12:00", 
+  "12:00 - 01:00",  // Lunch Break
+  "01:00 - 02:00", 
+  "02:00 - 03:00", 
+  "03:00 - 04:00", 
+  "04:00 - 05:00"
+];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const StudentDashboard = () => {
@@ -26,9 +36,17 @@ const StudentDashboard = () => {
 
   const getMinutes = (timeStr) => {
     if (!timeStr) return 0;
-    let [h, m] = timeStr.trim().split(':').map(Number);
-    if (h >= 1 && h <= 7) h += 12;
+    const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return 0;
+    let h = parseInt(match[1]);
+    let m = parseInt(match[2]);
+    if (h === 12) h = 12;
+    else if (h >= 1 && h <= 7) h += 12;
     return h * 60 + m;
+  };
+
+  const isLunchBreak = (timeStr) => {
+    return timeStr === '12:00 - 01:00';
   };
 
   const fetchSchedule = useCallback(async () => {
@@ -45,7 +63,7 @@ const StudentDashboard = () => {
   }, [userBatch]);
 
   const { currentClass, upcomingClasses } = useMemo(() => {
-    const today = timetable.filter(t => t.day === currentDay);
+    const today = timetable.filter(t => t.day === currentDay && !isLunchBreak(t.timeSlot));
     const nowH = currentTime.getHours();
     const nowM = currentTime.getMinutes();
     const nowTotalMin = nowH * 60 + nowM;
@@ -462,7 +480,7 @@ const StudentDashboard = () => {
                 </motion.button>
               </div>
               
-              <div className="overflow-x-auto">
+              <ZoomableTimetable>
                 <div className="min-w-[700px]">
                   <div className="grid grid-cols-7 gap-2 md:gap-4">
                     <div className="col-span-1 space-y-2 md:space-y-4 pt-8 md:pt-16 text-right pr-2">
@@ -473,7 +491,7 @@ const StudentDashboard = () => {
                     {days.map(day => (
                       <div key={day} className="col-span-1 space-y-2 md:space-y-4 text-center">
                         <h1 className={`text-[10px] md:text-sm font-bold uppercase tracking-wider pb-4 md:pb-8 border-b border-white/5 mb-4 md:mb-8 ${
-                          day === currentDay ? 'text-orange-400' : 'text-slate-300'
+                          day === currentDay ? 'text-red-400' : 'text-slate-300'
                         }`}>
                           {day.slice(0, 3)}
                         </h1>
@@ -484,24 +502,32 @@ const StudentDashboard = () => {
                             <motion.div 
                               key={i} 
                               whileHover={{ scale: 1.02 }}
-                              className={`h-12 md:h-20 rounded-lg md:rounded-xl border flex flex-col items-center justify-center p-1 md:p-3 transition-all ${
+                              className={`h-14 md:h-24 rounded-lg md:rounded-xl border flex flex-col items-center justify-center p-1 md:p-3 transition-all ${
                                 session 
                                   ? isCurrentSlot 
-                                    ? 'bg-gradient-to-br from-orange-500 to-red-500 border-white shadow-lg shadow-orange-500/30' 
-                                    : 'bg-orange-500/20 border-orange-500/50'
+                                    ? 'bg-gradient-to-br from-red-500 to-rose-600 border-white shadow-lg shadow-red-500/30' 
+                                    : 'bg-red-500/20 border-red-500/50'
                                   : 'bg-white/5 border-transparent'
                               }`}
                             >
                               {session ? (
                                 <>
-                                  <p className={`text-[6px] md:text-[10px] font-bold uppercase truncate w-full leading-tight ${isCurrentSlot ? 'text-white' : 'text-orange-400'}`}>
+                                  <p className={`text-[6px] md:text-[9px] font-bold uppercase truncate w-full leading-tight ${isCurrentSlot ? 'text-white' : 'text-red-400'}`}>
                                     {session.subject}
                                   </p>
-                                  <div className={`mt-1 px-1.5 py-0.5 rounded text-[5px] md:text-[8px] font-bold ${
-                                    isCurrentSlot ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+                                  <p className={`text-[5px] md:text-[7px] truncate w-full ${isCurrentSlot ? 'text-red-200' : 'text-red-300'}`}>
+                                    {session.subjectCode}
+                                  </p>
+                                  <div className={`mt-0.5 md:mt-1 px-1 md:px-2 py-0.5 rounded text-[5px] md:text-[7px] font-bold ${
+                                    isCurrentSlot ? 'bg-white text-red-600' : 'bg-red-500 text-white'
                                   }`}>
                                     R-{session.room}
                                   </div>
+                                  {session.facultyUid && (
+                                    <p className={`text-[4px] md:text-[6px] mt-0.5 ${isCurrentSlot ? 'text-white/70' : 'text-slate-400'}`}>
+                                      T: {session.facultyUid}
+                                    </p>
+                                  )}
                                 </>
                               ) : (
                                 <span className="text-[5px] text-slate-600 uppercase">-</span>
@@ -513,7 +539,7 @@ const StudentDashboard = () => {
                     ))}
                   </div>
                 </div>
-              </div>
+              </ZoomableTimetable>
             </motion.div>
           )}
         </AnimatePresence>

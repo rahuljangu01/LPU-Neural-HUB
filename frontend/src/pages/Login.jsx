@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { LogIn, Cpu, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import API from '../services/api';
-import { successToast, errorAlert } from '../services/alertService';
+import { successToast, errorAlert, welcomeToast } from '../services/alertService';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -22,8 +22,8 @@ const Login = () => {
       localStorage.setItem('userEmail', res.data.email);
       localStorage.setItem('userBatch', res.data.batch || ''); 
       localStorage.setItem('userUid', res.data.uid);
-      successToast(`Welcome ${res.data.name}!`);
-      navigate(`/${res.data.role.toLowerCase()}`);
+      welcomeToast(res.data.name);
+      setTimeout(() => navigate(`/${res.data.role.toLowerCase()}`), 1500);
     } catch (err) {
       errorAlert("Access Denied", "Invalid Credentials.");
     } finally { setLoading(false); }
@@ -40,7 +40,7 @@ const Login = () => {
             opacity: [0.1, 0.3, 0.1]
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-40 -left-40 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl"
+          className="absolute -top-40 -left-40 w-80 h-80 bg-red-500/20 rounded-full blur-3xl"
         />
         <motion.div 
           animate={{ 
@@ -49,7 +49,7 @@ const Login = () => {
             opacity: [0.1, 0.3, 0.1]
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl"
+          className="absolute -bottom-40 -right-40 w-80 h-80 bg-rose-500/20 rounded-full blur-3xl"
         />
       </div>
 
@@ -66,7 +66,7 @@ const Login = () => {
             <motion.div 
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 3, repeat: Infinity }}
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30 mb-3 overflow-hidden bg-white/10"
+              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30 mb-3 overflow-hidden bg-white/10"
             >
               <img src="/lpu-logo.png" alt="LPU Logo" className="w-full h-full object-contain" />
             </motion.div>
@@ -74,7 +74,7 @@ const Login = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 overflow-hidden">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30 overflow-hidden">
               <img src="/lpu-logo.png" alt="LPU Logo" className="w-8 h-8 object-contain" />
             </div>
             <h2 className="text-lg font-black text-white tracking-tight">LPU Neural HUB</h2>
@@ -92,7 +92,7 @@ const Login = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-2xl sm:text-3xl md:text-4xl font-black text-orange-500 mb-6 md:mb-8 tracking-tight leading-none"
+            className="text-2xl sm:text-3xl md:text-4xl font-black text-red-500 mb-6 md:mb-8 tracking-tight leading-none"
           >
             Login
           </motion.h2>
@@ -104,11 +104,11 @@ const Login = () => {
               transition={{ delay: 0.4 }}
               className="relative group"
             >
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors" size={18} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-red-500 transition-colors" size={18} />
               <input 
                 type="email" 
                 placeholder="Email Address" 
-                className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-orange-500 focus:bg-white/10 text-white font-medium text-sm transition-all"
+                className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-red-500 focus:bg-white/10 text-white font-medium text-sm transition-all"
                 onChange={e => setFormData({...formData, email: e.target.value})} 
                 required 
               />
@@ -120,11 +120,11 @@ const Login = () => {
               transition={{ delay: 0.5 }}
               className="relative group"
             >
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-orange-500 transition-colors" size={18} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-red-500 transition-colors" size={18} />
               <input 
                 type={showPassword ? "text" : "password"} 
                 placeholder="Password" 
-                className="w-full p-4 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-orange-500 focus:bg-white/10 text-white font-medium text-sm transition-all"
+                className="w-full p-4 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-red-500 focus:bg-white/10 text-white font-medium text-sm transition-all"
                 onChange={e => setFormData({...formData, password: e.target.value})} 
                 required 
               />
@@ -145,7 +145,7 @@ const Login = () => {
               whileTap={{ scale: 0.98 }}
               type="submit" 
               disabled={loading} 
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-gradient-to-r from-red-500 to-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transition-all flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
                 <motion.div 
@@ -167,7 +167,7 @@ const Login = () => {
             transition={{ delay: 0.7 }}
             className="text-center mt-6 text-sm text-slate-400 font-medium"
           >
-            New User? <Link to="/select-role" className="text-orange-500 hover:text-orange-400 font-bold transition-colors">Register Here</Link>
+            New User? <Link to="/select-role" className="text-red-500 hover:text-red-400 font-bold transition-colors">Register Here</Link>
           </motion.p>
         </div>
 
@@ -179,7 +179,7 @@ const Login = () => {
             transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
             className="absolute opacity-5"
           >
-            <Cpu size={350} className="text-orange-500"/>
+            <Cpu size={350} className="text-red-500"/>
           </motion.div>
           
           <motion.div 
@@ -188,7 +188,7 @@ const Login = () => {
               scale: [1, 1.1, 1]
             }}
             transition={{ duration: 4, repeat: Infinity }}
-            className="absolute top-10 right-10 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl"
+            className="absolute top-10 right-10 w-40 h-40 bg-red-500/20 rounded-full blur-3xl"
           />
           <motion.div 
             animate={{ 
@@ -203,7 +203,7 @@ const Login = () => {
             <motion.div 
               animate={{ y: [0, -15, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-32 h-32 bg-white/10 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-orange-500/40 mb-6 overflow-hidden"
+              className="w-32 h-32 bg-white/10 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-red-500/40 mb-6 overflow-hidden"
             >
               <img src="/lpu-logo.png" alt="LPU Logo" className="w-28 h-28 object-contain" />
             </motion.div>
