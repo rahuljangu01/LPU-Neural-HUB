@@ -231,17 +231,18 @@ exports.getUsers = async (req, res) => {
 
 // Helper: Get next available roll number for a batch
 const getNextRollNo = async (batchName) => {
-    const students = await User.find({ batch: batchName, role: 'student' }).sort({ rollNo: 1 });
+    const students = await User.find({ batch: batchName, role: 'student' }).sort({ createdAt: -1 });
     if (students.length === 0) return 1;
+    const usedRollNos = students.map(s => s.rollNo).filter(r => r > 0);
     for (let i = 1; i <= students.length + 1; i++) {
-        if (!students.find(s => s.rollNo === i)) return i;
+        if (!usedRollNos.includes(i)) return i;
     }
     return students.length + 1;
 };
 
-// Helper: Re-number all students in a batch
+// Helper: Re-number all students in a batch (last added = rollNo 1)
 const renumberBatch = async (batchName) => {
-    const students = await User.find({ batch: batchName, role: 'student' }).sort({ rollNo: 1 });
+    const students = await User.find({ batch: batchName, role: 'student' }).sort({ createdAt: -1 });
     const batchInfo = await Batch.findOne({ name: batchName });
     const totalCapacity = batchInfo?.studentCount || 50;
     const halfCapacity = Math.ceil(totalCapacity / 2);
