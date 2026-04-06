@@ -369,13 +369,17 @@ const HODDashboard = () => {
           }
         }
         
+        const sectionName = (studentGroup === "Full Batch" || studentGroup === "G1" || studentGroup === "G2") 
+          ? `${batch} ${studentGroup === "Full Batch" ? "" : studentGroup}`.trim()
+          : batch;
+        
         return {
           "RoomNumber": cls.room || cls.roomNumber || "N/A",
           "AttendanceType": attendanceType,
           "AttendanceDay": cls.day,
           "AttendanceTime": cls.timeSlot,
           "TeacherLogin": cls.faculty?.uid || cls.facultyUid || "N/A",
-          "Section": batch || batchName,
+          "Section": sectionName || batchName,
           "CourseCode": cls.subjectCode || cls.code || subject,
           "StudentGroup": studentGroup
         };
