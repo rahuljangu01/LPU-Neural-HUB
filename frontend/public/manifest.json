@@ -1,27 +1,32 @@
 {
-  "short_name": "LPU Neural Hub",
+  "short_name": "Neural Hub",
   "name": "LPU Neural Hub",
-  "icons":[
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
+  "short_name": "Neural Hub",
+  "description": "AI Powered Timetable Management System",
+  "icons": [
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     },
     {
       "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "lpu-logo.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#ea580c",
-  "background_color": "#050505"
+  "orientation": "portrait",
+  "theme_color": "#020617",
+  "background_color": "#020617",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false
 }

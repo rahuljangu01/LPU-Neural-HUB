@@ -7,17 +7,46 @@
     <meta name="theme-color" content="#020617" />
     <meta name="description" content="LPU Neural Matrix - AI Powered Timetable Hub" />
     
-    <!-- Apple Mobile Web App Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LPU Hub">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Neural Hub" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- iOS App Icons -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo512.png" />
+    
+    <!-- iOS Splash Screens -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- iPhone X / XS / 11 Pro / 12 mini / 13 mini (1125x2436) -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/logo512.png" media="(device-width: 375px) and (device-height: 812px)" />
+    
+    <!-- iPhone XR / 11 / 12 (828x1792) -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/logo512.png" media="(device-width: 414px) and (device-height: 896px)" />
+    
+    <!-- iPhone XS Max / 11 Pro Max / 12 Pro Max / 13 Pro Max (1242x2688) -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/logo512.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
 
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
-    <title>LPU Neural HUB </title>
+    <title>LPU Neural HUB</title>
+    
+    <style>
+      /* iOS Safe Area Support */
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      
+      /* Prevent overscroll bounce */
+      html, body {
+        overscroll-behavior: none;
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
