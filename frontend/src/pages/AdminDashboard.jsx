@@ -160,12 +160,6 @@ const AdminDashboard = memo(() => {
     }
 
     const currentAssignedCount = allUsers.filter(u => u.batch === batchName && u.role === 'student').length;
-    const maxCapacity = viewBatchDetails?.studentCount || 50;
-
-    if (currentAssignedCount >= maxCapacity) {
-        errorAlert("Batch Full", `Maximum ${maxCapacity} students allowed.`);
-        return;
-    }
 
     const student = studentList.find(s => s._id === userId);
     if (student.batch && student.batch !== '' && student.batch !== batchName) {

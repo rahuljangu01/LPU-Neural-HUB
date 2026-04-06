@@ -8,7 +8,7 @@ const NotificationPanel = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [msgContent, setMsgContent] = useState('');
   const [sending, setSending] = useState(false);
-  const userRole = localStorage.getItem('role');
+  const userRole = localStorage.getItem('role')?.toLowerCase() || '';
   const userName = localStorage.getItem('userName') || 'User';
   const isAdminOrHod = userRole === 'admin' || userRole === 'hod';
 
@@ -167,10 +167,9 @@ const NotificationPanel = ({ isOpen, onClose }) => {
 
                       {isAdminOrHod && (
                         <motion.button
-                          initial={{ opacity: 0 }}
                           whileHover={{ scale: 1.1 }}
                           onClick={() => deleteMsg(m._id)}
-                          className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                          className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all min-w-[36px] min-h-[36px] flex items-center justify-center"
                         >
                           <Trash2 size={14}/>
                         </motion.button>

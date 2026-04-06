@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Batch = require('../models/Batch');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const XLSX = require('xlsx'); 
@@ -244,13 +245,15 @@ exports.updateUserAI = async (req, res) => {
             const user = await User.findById(userId);
             if (user && user.role === 'student') {
                 if (batch !== '' && user.batch !== batch) {
-                    // Check batch size for auto increment roll number
                     const currentCount = await User.countDocuments({ batch: batch, role: 'student' });
                     const newRollNo = currentCount + 1;
                     updateFields.rollNo = newRollNo;
-                    // Auto Split into G1/G2 based on roll number
-                    updateFields.group = (newRollNo <= 25) ? 'G1' : 'G2';
                     updateFields.batch = batch;
+                    
+                    const batchInfo = await Batch.findOne({ name: batch });
+                    const totalCapacity = batchInfo?.studentCount || 50;
+                    const halfCapacity = Math.ceil(totalCapacity / 2);
+                    updateFields.group = (newRollNo <= halfCapacity) ? 'G1' : 'G2';
                 } else if (batch === '') {
                     updateFields.batch = '';
                     updateFields.rollNo = 0;
