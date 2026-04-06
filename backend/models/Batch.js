@@ -5,6 +5,7 @@ const BatchSchema = new mongoose.Schema({
     subGroup: { type: String, enum: ['G1', 'G2', null], default: null }, // Subgroup identifier
     studentCount: { type: Number, required: true }, // Total students
     splitGroups: { type: Boolean, default: false }, // Auto-split into G1/G2?
+    isElective: { type: Boolean, default: false }, // Is this an elective batch?
     semester: { type: Number, required: true },
     department: { type: String, required: true },
     subjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subject' }] // Subjects this batch studies

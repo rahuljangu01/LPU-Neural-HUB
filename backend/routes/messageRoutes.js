@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
+const auth = require('../middleware/authMiddleware');
 
 // 1. Get All Messages
 router.get('/', async (req, res) => {
@@ -24,8 +25,8 @@ router.post('/', async (req, res) => {
     }
 });
 
-// 3. Delete Message
-router.delete('/:id', async (req, res) => {
+// 3. Delete Message - Protected route (Admin, HOD, Faculty can delete)
+router.delete('/:id', auth, async (req, res) => {
     try {
         await Message.findByIdAndDelete(req.params.id);
         res.json({ msg: "Message Cleared" });

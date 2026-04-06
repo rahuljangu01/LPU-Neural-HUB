@@ -78,7 +78,9 @@ exports.login = async (req, res) => {
                 email: user.email,
                 department: user.department,
                 batch: user.batch,
-                uid: user.uid
+                electiveBatch: user.electiveBatch || '',
+                uid: user.uid,
+                verified: user.verified || false
             });
         });
     } catch (err) {
@@ -257,13 +259,24 @@ const renumberBatch = async (batchName) => {
 // 5. Update AI Node (Auto RollNo + Grouping Logic)
 exports.updateUserAI = async (req, res) => {
     try {
-        const { userId, expertise, maxWorkload, avgLeaves, batch } = req.body;
+        const { userId, expertise, maxWorkload, avgLeaves, batch, group, electiveBatch } = req.body;
+        console.log('updateUserAI called:', { userId, batch, electiveBatch });
         const updateFields = {};
 
         if (expertise !== undefined) {
             updateFields.expertise = typeof expertise === 'string' 
                 ? expertise.split(',').map(item => item.trim()) 
                 : expertise;
+        }
+
+        if (electiveBatch !== undefined) {
+            updateFields.electiveBatch = electiveBatch;
+            if (batch === undefined || batch === '') {
+                console.log('Saving only electiveBatch:', updateFields);
+                const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true }).select('-password');
+                if (!updatedUser) return res.status(404).json({ msg: 'Identity node not found' });
+                return res.json({ msg: 'Neural Parameters Synced!', user: updatedUser });
+            }
         }
 
         if (batch !== undefined) {
@@ -276,10 +289,15 @@ exports.updateUserAI = async (req, res) => {
                     updateFields.rollNo = newRollNo;
                     updateFields.batch = batch;
                     
-                    const batchInfo = await Batch.findOne({ name: batch });
-                    const totalCapacity = batchInfo?.studentCount || 50;
-                    const halfCapacity = Math.ceil(totalCapacity / 2);
-                    updateFields.group = (newRollNo <= halfCapacity) ? 'G1' : 'G2';
+                    // Use provided group (from +G1/+G2 button) or auto-assign
+                    if (group) {
+                        updateFields.group = group;
+                    } else {
+                        const batchInfo = await Batch.findOne({ name: batch });
+                        const totalCapacity = batchInfo?.studentCount || 50;
+                        const halfCapacity = Math.ceil(totalCapacity / 2);
+                        updateFields.group = (newRollNo <= halfCapacity) ? 'G1' : 'G2';
+                    }
                     
                     if (oldBatch) await renumberBatch(oldBatch);
                 } else if (batch === '') {
@@ -289,6 +307,10 @@ exports.updateUserAI = async (req, res) => {
                     if (oldBatch) await renumberBatch(oldBatch);
                 } else {
                     updateFields.batch = batch;
+                    // Update group if explicitly provided
+                    if (group) {
+                        updateFields.group = group;
+                    }
                 }
             } else {
                 updateFields.batch = batch;
@@ -298,6 +320,7 @@ exports.updateUserAI = async (req, res) => {
         if (maxWorkload !== undefined) updateFields.maxWorkload = Number(maxWorkload);
         if (avgLeaves !== undefined) updateFields.avgLeaves = Number(avgLeaves);
 
+        console.log('Final updateFields:', updateFields);
         const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true }).select('-password');
         if (!updatedUser) return res.status(404).json({ msg: 'Identity node not found' });
 
@@ -346,5 +369,29 @@ exports.changePassword = async (req, res) => {
         res.json({ msg: "Password changed successfully" });
     } catch (err) {
         res.status(500).json({ msg: "Failed to change password" });
+    }
+};
+
+// Verify or Revoke HOD account
+exports.verifyHOD = async (req, res) => {
+    try {
+        const { userId, verified } = req.body;
+        
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+        
+        if (user.role !== 'hod') {
+            return res.status(400).json({ msg: 'Only HOD accounts can be verified' });
+        }
+        
+        user.verified = verified;
+        await user.save();
+        
+        res.json({ 
+            msg: verified ? 'HOD verified successfully' : 'HOD verification revoked', 
+            user: { ...user.toObject(), password: undefined } 
+        });
+    } catch (err) {
+        res.status(500).json({ msg: 'Failed to update HOD status' });
     }
 };

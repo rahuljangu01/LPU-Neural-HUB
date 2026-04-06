@@ -11,8 +11,7 @@ exports.getBatches = async (req, res) => {
 
 exports.addBatch = async (req, res) => {
     try {
-        // NAYA FIX: req.body se 'subjects' ko bhi receive kiya
-        const { name, studentCount, subjects } = req.body; 
+        const { name, studentCount, subjects, isElective } = req.body; 
         
         const existing = await Batch.findOne({ name: name.trim() });
         if (existing) return res.status(400).json({ msg: "This Batch ID already exists." });
@@ -22,8 +21,8 @@ exports.addBatch = async (req, res) => {
             studentCount: Number(studentCount),
             semester: 1,
             department: 'MCA',
-            // NAYA FIX: subjects ko database mein save kiya
-            subjects: subjects ||[] 
+            subjects: subjects || [],
+            isElective: isElective || false
         });
         
         await newBatch.save();

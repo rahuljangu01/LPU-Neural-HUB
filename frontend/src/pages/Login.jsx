@@ -21,8 +21,18 @@ const Login = () => {
       localStorage.setItem('userName', res.data.name);
       localStorage.setItem('userEmail', res.data.email);
       localStorage.setItem('userBatch', res.data.batch || ''); 
+      localStorage.setItem('userElectiveBatch', res.data.electiveBatch || '');
       localStorage.setItem('userUid', res.data.uid);
-      welcomeToast(res.data.name);
+      localStorage.setItem('userDepartment', res.data.department || '');
+      localStorage.setItem('userVerified', res.data.verified ? 'true' : 'false');
+      
+      // Check if HOD is not verified
+      if (res.data.role?.toLowerCase() === 'hod' && !res.data.verified) {
+        welcomeToast(res.data.name + ' - Verification Pending');
+      } else {
+        welcomeToast(res.data.name);
+      }
+      
       setTimeout(() => navigate(`/${res.data.role.toLowerCase()}`), 1500);
     } catch (err) {
       errorAlert("Access Denied", "Invalid Credentials.");

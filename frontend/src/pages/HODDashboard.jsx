@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Trash2, Building2, Clock, User as UserIcon, Activity, 
   ArrowLeft, Search, CheckCircle2,
-  Cpu, Briefcase,
+  Briefcase,
   RefreshCw, Wand2,
   LayoutGrid, Download,
   FileSpreadsheet, GraduationCap, Calendar,
-  Zap, Settings, Cog, Sparkles, Atom
+  Atom,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
@@ -43,6 +44,10 @@ const HODDashboard = () => {
   const [genStep, setGenStep] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   
+  const userDept = localStorage.getItem('userDepartment') || '';
+  const isVerified = localStorage.getItem('userVerified') === 'true';
+  const [verified, setVerified] = useState(isVerified);
+  
   const [variants, setVariants] = useState([]); 
   const [activeVariantIndex, setActiveVariantIndex] = useState(0); 
   const [faculties, setFaculties] = useState([]);
@@ -61,45 +66,7 @@ const HODDashboard = () => {
   });
   const [query, setQuery] = useState({ day: 'Monday', timeSlot: '09:00 - 10:00' });
   
-  // Zoom state for mobile pinch-to-zoom
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isZooming, setIsZooming] = useState(false);
-  const [startDistance, setStartDistance] = useState(0);
-  const [startZoom, setStartZoom] = useState(1);
-
   const userName = localStorage.getItem('userName') || 'HOD';
-
-  // Touch handlers for pinch-to-zoom
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      setIsZooming(true);
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-      setStartDistance(distance);
-      setStartZoom(zoomLevel);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (isZooming && e.touches.length === 2) {
-      e.preventDefault();
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-      const scale = distance / startDistance;
-      const newZoom = Math.min(Math.max(startZoom * scale, 1), 3); // Min 1x, Max 3x
-      setZoomLevel(newZoom);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsZooming(false);
-    // Snap to nearest zoom level
-    if (zoomLevel < 1.25) setZoomLevel(1);
-    else if (zoomLevel < 1.75) setZoomLevel(1.5);
-    else setZoomLevel(2);
-  };
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -128,7 +95,7 @@ const HODDashboard = () => {
       const batchesData = extractData(b);
       const subjectsData = extractData(sub);
       
-      // Handle timetable data
+      // Handle timetable data - FILTER BY DEPARTMENT
       let timetableData = [];
       if (Array.isArray(s.data)) {
         timetableData = s.data;
@@ -136,11 +103,29 @@ const HODDashboard = () => {
         timetableData = s.data.schedule;
       }
       
-      setFaculties(usersData.filter(user => user.role === 'faculty' || user.role === 'hod'));
+      // Filter timetable by HOD's department
+      timetableData = timetableData.filter(t => t.department === userDept);
+      
+      // Filter faculties by department
+      const deptFaculties = usersData.filter(user => 
+        (user.role === 'faculty' || user.role === 'hod') && user.department === userDept
+      );
+      
+      // Filter batches by department
+      const deptBatches = batchesData.filter(b => b.department === userDept);
+      
+      // Check verified status from user data
+      const myUser = usersData.find(u => u.email === localStorage.getItem('userEmail'));
+      if (myUser) {
+        setVerified(myUser.verified || false);
+        localStorage.setItem('userVerified', myUser.verified ? 'true' : 'false');
+      }
+      
+      setFaculties(deptFaculties);
       setCurrentSchedule(timetableData);
       setRooms(roomsData);
-      setBatches(batchesData);
-      setSubjectList(subjectsData);
+      setBatches(deptBatches);
+      setSubjectList(subjectsData.filter(sub => sub.department === userDept));
       
       console.log('📊 Hub Intel Fetched:', {
         timetableCount: timetableData.length,
@@ -215,21 +200,6 @@ const HODDashboard = () => {
     }, {});
   }, [currentSchedule]);
 
-  // Group G1/G2 under parent batch for better display
-  const parentGroupedSchedule = useMemo(() => {
-    const grouped = {};
-    currentSchedule.forEach(cls => {
-      const batch = cls.batch || 'UNASSIGNED';
-      // Extract parent batch name (e.g., "D2421" from "D2421 G1")
-      const parentMatch = batch.match(/^(.+?)\s*[Gg]1\s*$/i) || batch.match(/^(.+?)[Gg]1$/i);
-      const parentBatch = parentMatch ? parentMatch[1].trim() : batch;
-      
-      if (!grouped[parentBatch]) grouped[parentBatch] = [];
-      grouped[parentBatch].push(cls);
-    });
-    return grouped;
-  }, [currentSchedule]);
-
   const executeNeuralEngine = async () => {
     if (!(await confirmDialog("Generate Timetable?", "AI will create 3 optimized timetable options for you."))) return;
     setIsGenerating(true);
@@ -253,7 +223,7 @@ const HODDashboard = () => {
   };
 
   const handleApproveVariant = async () => {
-    if (await confirmDialog("Deploy Timetable?", "This will replace the entire timetable!")) {
+    if (await confirmDialog("Deploy Timetable?", "This will update the selected batch timetable!")) {
       setIsGenerating(true);
       try {
         const scheduleToDeploy = variants[activeVariantIndex].schedule;
@@ -263,7 +233,10 @@ const HODDashboard = () => {
           batches: [...new Set(scheduleToDeploy.map(s => s.batch))]
         });
         
-        const res = await API.post('/timetable/add-bulk', { schedule: scheduleToDeploy });
+        const res = await API.post('/timetable/add-bulk', { 
+          schedule: scheduleToDeploy,
+          batchId: params.batchId 
+        });
         console.log('✅ Deploy response:', res.data);
         
         successToast(`Timetable Deployed! ${res.data.count} classes scheduled.`);
@@ -327,41 +300,37 @@ const HODDashboard = () => {
         const batch = cls.batch || '';
         const subject = cls.subject || '';
         
-        // AttendanceType: L for Lecture, P for Practical
-        let attendanceType = "L";
+        // Check if Practical/Lab
+        let isPractical = false;
         if (cls.type) {
           const type = cls.type.toLowerCase();
           if (type === 'lab' || type === 'practical' || type.includes('lab')) {
-            attendanceType = "P";
+            isPractical = true;
           }
         } else if (subject.toLowerCase().includes('lab')) {
-          attendanceType = "P";
+          isPractical = true;
         }
         
-        // StudentGroup: Check studentGroup field OR batch name for G1/G2
-        let studentGroup = "0"; // Default: Full Batch = 0
+        // AttendanceType: L for Lecture, P for Practical
+        const attendanceType = isPractical ? "P" : "L";
         
-        // Check studentGroup field first (from backend)
-        const sgField = cls.studentGroup?.toString().toUpperCase();
-        if (sgField === 'G1' || sgField === 'G2') {
-          studentGroup = cls.studentGroup.toString();
-        } else {
-          // Fallback: Check batch name using regex
-          const batchStr = batch.toString();
-          if (/G1$/i.test(batchStr) || /\sG1$/i.test(batchStr)) {
+        // StudentGroup: Check studentGroup field first
+        let studentGroup = cls.studentGroup || "0";
+        
+        // If studentGroup is not G1/G2, check batch name
+        if (studentGroup === "0" || !studentGroup) {
+          const batchStr = batch.toString().toUpperCase();
+          if (batchStr.includes('G1')) {
             studentGroup = 'G1';
-          } else if (/G2$/i.test(batchStr) || /\sG2$/i.test(batchStr)) {
+          } else if (batchStr.includes('G2')) {
             studentGroup = 'G2';
           }
         }
         
-        // Day format: Short form only (Mon, Tue, Wed, Thu, Fri, Sat)
+        // Day format: Short form only
         const dayMap = { 'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun' };
         const dayLower = (cls.day || '').toLowerCase();
         const dayShort = dayMap[dayLower] || cls.day;
-        
-        // Section: Use batch name with G1/G2 suffix if applicable
-        const sectionName = studentGroup === "0" ? batch : `${batch}`;
         
         return {
           "RoomNumber": cls.room || cls.roomNumber || "N/A",
@@ -369,10 +338,19 @@ const HODDashboard = () => {
           "AttendanceDay": dayShort,
           "AttendanceTime": cls.timeSlot,
           "TeacherLogin": cls.faculty?.uid || cls.facultyUid || "N/A",
-          "Section": sectionName || batchName,
+          "Section": batch,
           "CourseCode": cls.subjectCode || cls.code || subject,
           "StudentGroup": studentGroup
         };
+      });
+      
+      // Sort by day order: Mon, Tue, Wed, Thu, Fri, Sat
+      const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
+      excelData.sort((a, b) => {
+        const dayA = dayOrder[a.AttendanceDay] || 8;
+        const dayB = dayOrder[b.AttendanceDay] || 8;
+        if (dayA !== dayB) return dayA - dayB;
+        return a.AttendanceTime.localeCompare(b.AttendanceTime);
       });
       
       const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -420,92 +398,121 @@ const HODDashboard = () => {
     { id: 'monitor', label: 'All Schedules', sub: 'View & Manage Timetable', icon: Activity, color: 'from-red-800 to-rose-800' },
   ];
 
+  // 🚫 NOT VERIFIED - Show waiting screen
+  if (!verified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 text-center"
+        >
+          <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldCheck className="w-10 h-10 text-amber-400"/>
+          </div>
+          <h1 className="text-2xl font-black text-white mb-2">Verification Required</h1>
+          <p className="text-slate-400 mb-6">
+            Your HOD account is pending verification by the Admin. 
+            Once verified, you'll have full access to all HOD features.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-amber-400 mb-4">
+            <Clock className="w-5 h-5 animate-pulse"/>
+            <span className="font-bold">Waiting for Admin approval...</span>
+          </div>
+          <p className="text-slate-500 text-sm mb-6">
+            Department: <span className="text-white font-bold">{userDept}</span>
+          </p>
+          <button
+            onClick={() => {
+              localStorage.clear();
+              navigate('/login');
+            }}
+            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+          >
+            Logout
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 font-['Outfit']">
       
-      {/* AI GENERATION OVERLAY - CLEAN & LIGHT */}
+      {/* AI GENERATION OVERLAY - LIGHT & ANIMATED */}
       <AnimatePresence>
         {isGenerating && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[500] bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center text-slate-800 text-center px-6"
+            className="fixed inset-0 z-[500] bg-white flex items-center justify-center overflow-hidden"
           >
-            {/* Clean AI Animation */}
-            <div className="relative mb-8">
-              <motion.div
-                className="w-24 h-24 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center shadow-xl"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Atom size={48} className="text-white"/>
-              </motion.div>
+            <div className="flex flex-col items-center">
               
-              {/* Progress Ring */}
-              <svg className="absolute inset-0 w-24 h-24 -rotate-90">
-                <circle cx="48" cy="48" r="44" fill="none" stroke="#fee2e2" strokeWidth="4"/>
-                <motion.circle 
-                  cx="48" cy="48" r="44" 
-                  fill="none" 
-                  stroke="url(#gradient)" 
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={276}
-                  strokeDashoffset={276 - (276 * ((genStep + 1) / aiSteps.length))}
-                  transition={{ duration: 0.5 }}
+              {/* Animated Loader */}
+              <div className="relative w-32 h-32 mb-6">
+                <motion.div
+                  className="absolute inset-0 rounded-full border-4 border-red-100"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ef4444"/>
-                    <stop offset="100%" stopColor="#f43f5e"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-
-            {/* Percentage */}
-            <motion.div key={genStep}>
-              <h2 className="text-6xl font-black text-slate-800 mb-2">
-                {Math.round(((genStep + 1) / aiSteps.length) * 100)}%
-              </h2>
-              <p className="text-lg font-semibold text-red-500 uppercase tracking-wider">
-                {aiSteps[genStep] || 'Processing...'}
-              </p>
-            </motion.div>
-
-            {/* Progress Bar */}
-            <div className="w-64 mt-6 mb-6">
-              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-gradient-to-r from-red-500 to-rose-500 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((genStep + 1) / aiSteps.length) * 100}%` }}
-                  transition={{ duration: 0.5 }}
+                <motion.div
+                  className="absolute inset-2 rounded-full border-4 border-red-200"
+                  animate={{ scale: [1.1, 1, 1.1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
                 />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Atom className="text-red-500" size={32} />
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Step {genStep + 1} of {aiSteps.length}
+
+              {/* Percentage */}
+              <motion.div 
+                key={genStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center mb-4"
+              >
+                <span className="text-5xl font-black text-slate-800">
+                  {Math.min(Math.round(((genStep + 1) / aiSteps.length) * 100), 100)}
+                </span>
+                <span className="text-3xl text-red-500 font-bold">%</span>
+              </motion.div>
+
+              {/* Status Text */}
+              <p className="text-slate-600 font-medium text-base mb-4">
+                {aiSteps[Math.min(genStep, aiSteps.length - 1)]}
               </p>
-            </div>
 
-            {/* Quick Stats */}
-            <div className="flex gap-6 text-sm">
-              <div className="text-center">
-                <p className="text-2xl font-black text-red-500">{rooms.length}</p>
-                <p className="text-xs text-slate-500">Rooms</p>
+              {/* Step Dots */}
+              <div className="flex gap-2 mb-6">
+                {aiSteps.map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={i <= genStep ? { scale: [1, 1.3, 1], backgroundColor: '#ef4444' } : { scale: 1, backgroundColor: '#e5e7eb' }}
+                    transition={{ duration: 0.3 }}
+                    className="w-2.5 h-2.5 rounded-full"
+                  />
+                ))}
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-red-500">{batches.length}</p>
-                <p className="text-xs text-slate-500">Batches</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-red-500">{subjectList.length}</p>
-                <p className="text-xs text-slate-500">Subjects</p>
+
+              {/* Info Cards */}
+              <div className="flex gap-3">
+                <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center">
+                  <p className="text-xl font-black text-slate-800">{rooms.length}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Rooms</p>
+                </div>
+                <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center">
+                  <p className="text-xl font-black text-slate-800">{batches.length}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Batches</p>
+                </div>
+                <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center">
+                  <p className="text-xl font-black text-slate-800">{subjectList.length}</p>
+                  <p className="text-[10px] text-slate-500 uppercase">Subjects</p>
+                </div>
               </div>
             </div>
-
-            <p className="text-slate-400 text-sm mt-6">Generating optimal timetable...</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -648,40 +655,37 @@ const HODDashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 {filteredFaculties.map((f, i) => (
                   <motion.div 
                     key={f._id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 }}
-                    whileHover={{ y: -5 }}
-                    className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
+                    whileHover={{ y: -2 }}
+                    className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-3 sm:p-4 shadow-md hover:shadow-lg transition-all"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-500 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-red-600 to-red-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md">
                         {f.name.charAt(0)}
                       </div>
-                      <span className="px-3 py-1 bg-red-600/20 text-red-400 text-[10px] font-bold rounded-full uppercase">{f.department}</span>
+                      <span className="px-1.5 py-0.5 bg-red-600/20 text-red-400 text-[8px] font-bold rounded-full uppercase">{f.department}</span>
                     </div>
-                    <h3 className="text-lg font-black text-white mb-1">{f.name}</h3>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-slate-400 text-xs font-semibold">Faculty</span>
-                      <span className="text-red-400 font-bold">• UID: {f.uid || 'N/A'}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {f.expertise?.slice(0, 3).map((exp, i) => (
-                        <span key={i} className="px-2 py-1 bg-slate-700 text-slate-300 text-[10px] font-semibold rounded-lg uppercase">{exp}</span>
+                    <h3 className="text-sm sm:text-base font-bold text-white mb-0.5 truncate">{f.name}</h3>
+                    <p className="text-slate-500 text-[9px] sm:text-[10px] mb-2">UID: {f.uid || 'N/A'}</p>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {f.expertise?.slice(0, 2).map((exp, i) => (
+                        <span key={i} className="px-1 py-0.5 bg-slate-700 text-slate-300 text-[7px] sm:text-[9px] font-semibold rounded uppercase">{exp}</span>
                       ))}
                     </div>
-                    <div className="flex gap-4 pt-4 border-t border-slate-700">
+                    <div className="flex gap-2 pt-2 border-t border-slate-700">
                       <div className="text-center flex-1">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Max Load</p>
-                        <p className="text-lg font-black text-white">{f.maxWorkload}h</p>
+                        <p className="text-[8px] text-slate-500 uppercase">Max</p>
+                        <p className="text-sm font-black text-white">{f.maxWorkload}h</p>
                       </div>
                       <div className="text-center flex-1">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Buffer</p>
-                        <p className="text-lg font-black text-white">{f.avgLeaves}d</p>
+                        <p className="text-[8px] text-slate-500 uppercase">Buffer</p>
+                        <p className="text-sm font-black text-white">{f.avgLeaves}d</p>
                       </div>
                     </div>
                   </motion.div>
@@ -1102,9 +1106,14 @@ const HODDashboard = () => {
                                               <span className="text-[7px] text-slate-400 font-semibold">R-{session.room}</span>
                                               <span className="text-[7px] text-emerald-400 font-semibold">{session.facultyUid || session.faculty?.uid}</span>
                                             </div>
-                                            {session.studentGroup && session.studentGroup !== 'Full Batch' && (
+                                            {session.studentGroup && session.studentGroup !== '0' && (
                                               <span className={`text-[6px] font-bold mt-0.5 ${isG1Batch ? 'text-blue-400' : 'text-purple-400'}`}>
                                                 {session.studentGroup}
+                                              </span>
+                                            )}
+                                            {session.studentGroup === '0' && (
+                                              <span className="text-[6px] text-slate-500 font-bold mt-0.5">
+                                                0
                                               </span>
                                             )}
                                             <motion.button 

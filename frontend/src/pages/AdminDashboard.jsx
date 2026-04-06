@@ -12,7 +12,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import API from '../services/api';
 import { successToast, errorAlert, confirmDialog } from '../services/alertService';
-import ZoomableTimetable from '../components/ZoomableTimetable';
 
 const AdminDashboard = memo(() => {
   const location = useLocation();
@@ -21,7 +20,7 @@ const AdminDashboard = memo(() => {
 
   const [room, setRoom] = useState({ roomNumber: '', capacity: '', block: 'Main', type: 'Theory' });
   const [subject, setSubject] = useState({ name: '', code: '', weeklyHours: 4, type: 'Theory', department: 'MCA' });
-  const [batch, setBatch] = useState({ name: '', studentCount: 60, semester: 1, department: 'MCA', subjects:[] });
+  const [batch, setBatch] = useState({ name: '', studentCount: 60, semester: 1, department: 'MCA', subjects:[], isElective: false });
   const [signal, setSignal] = useState('');
   
   const [teacherSearch, setTeacherSearch] = useState('');
@@ -149,27 +148,48 @@ const AdminDashboard = memo(() => {
     }
   };
 
-  const assignStudentToBatch = async (userId, batchName) => {
-    if (batchName === '') {
+  const assignStudentToBatch = async (userId, batchName, group = null, electiveBatchName = null) => {
+    console.log('assignStudentToBatch called:', { userId, batchName, group, electiveBatchName });
+    console.log('electiveBatchName type:', typeof electiveBatchName, 'value:', electiveBatchName, 'truthy:', !!electiveBatchName);
+    
+    if (batchName === '' && !electiveBatchName) {
+        console.log('Entering REMOVE branch');
         try {
-            await API.post(`/auth/update-expertise`, { userId, batch: '' });
+            await API.post(`/auth/update-expertise`, { userId, batch: '', electiveBatch: '' });
             successToast("Removed from batch");
             fetchData();
             return;
         } catch (err) { errorAlert("Error", "Failed to remove."); return; }
     }
 
-    const currentAssignedCount = allUsers.filter(u => u.batch === batchName && u.role === 'student').length;
-
     const student = studentList.find(s => s._id === userId);
+    
+    console.log('student found:', student ? student.name : 'not found');
+    console.log('Checking if electiveBatchName is truthy:', !!electiveBatchName, electiveBatchName);
+    
+    if (electiveBatchName) {
+        console.log('Adding to elective branch:', { userId, electiveBatch: electiveBatchName });
+        try {
+            await API.post(`/auth/update-expertise`, { userId, electiveBatch: electiveBatchName });
+            successToast("Added to elective batch");
+            fetchData();
+            return;
+        } catch (err) { 
+            console.error('Elective error:', err);
+            errorAlert("Error", "Failed to add student to elective."); 
+            return;
+        }
+    }
+
+    // Regular batch logic
     if (student.batch && student.batch !== '' && student.batch !== batchName) {
         errorAlert("Error", `Already in batch: ${student.batch}.`);
         return;
     }
 
     try {
-        await API.post(`/auth/update-expertise`, { userId, batch: batchName });
-        successToast("Added to batch");
+        await API.post(`/auth/update-expertise`, { userId, batch: batchName, group: group });
+        successToast(group ? `Added to ${group}` : "Added to batch");
         fetchData();
     } catch (err) { 
         errorAlert("Error", "Failed to add student."); 
@@ -190,6 +210,17 @@ const AdminDashboard = memo(() => {
       fetchData();
     } catch (err) { 
       errorAlert("Error", "Failed to send message."); 
+    }
+  };
+
+  const handleVerifyHOD = async (userId, verify) => {
+    try {
+      await API.post(`/auth/verify-hod`, { userId, verified: verify });
+      successToast(verify ? "HOD Verified!" : "HOD Access Revoked!");
+      fetchData();
+      setViewingUser(null);
+    } catch (err) { 
+      errorAlert("Error", "Failed to update HOD status."); 
     }
   };
 
@@ -660,7 +691,7 @@ const AdminDashboard = memo(() => {
               )}
             </div>
 
-            <div className="p-3 sm:p-4 md:p-6">
+            <div className="p-2 sm:p-4 md:p-6">
               <motion.div 
                 initial="hidden"
                 animate="visible"
@@ -671,7 +702,7 @@ const AdminDashboard = memo(() => {
                   <motion.div 
                     key={u._id}
                     variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                    whileHover={deleteMode ? {} : { y: -3, boxShadow: "0 8px 25px -5px rgba(0,0,0,0.15)" }}
+                    whileHover={deleteMode ? {} : { y: -2, boxShadow: "0 4px 12px -2px rgba(0,0,0,0.1)" }}
                     onClick={() => {
                       if (deleteMode && u.role !== 'admin') {
                         toggleUserSelection(u._id);
@@ -679,7 +710,7 @@ const AdminDashboard = memo(() => {
                         setViewingUser(u);
                       }
                     }} 
-                    className={`relative p-3 sm:p-4 md:p-5 bg-white border-2 rounded-lg sm:rounded-xl transition-all ${
+                    className={`relative p-2 sm:p-3 md:p-4 bg-white border-2 rounded-lg sm:rounded-xl transition-all ${
                       u.role === 'admin' 
                         ? 'cursor-default border-slate-100' 
                         : deleteMode 
@@ -690,19 +721,19 @@ const AdminDashboard = memo(() => {
                     }`}
                   >
                     {deleteMode && u.role !== 'admin' && (
-                      <div className={`absolute top-2 left-2 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      <div className={`absolute top-1 left-1 w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         selectedUsers.includes(u._id) 
                           ? 'bg-red-500 border-red-500' 
                           : 'border-slate-300 bg-white'
                       }`}>
                         {selectedUsers.includes(u._id) && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-white"/>
+                          <CheckCircle2 className="w-3 h-3 text-white"/>
                         )}
                       </div>
                     )}
                     
                     <div className="flex flex-col items-center text-center">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl flex items-center justify-center text-xl sm:text-2xl md:text-3xl font-black mb-2 sm:mb-3 shadow-lg ${
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-lg sm:rounded-xl flex items-center justify-center text-base sm:text-xl md:text-2xl font-black mb-1 sm:mb-2 shadow-md ${
                         u.role === 'admin' ? 'bg-gradient-to-br from-red-500 to-red-600' :
                         u.role === 'student' ? 'bg-gradient-to-br from-cyan-500 to-teal-500' :
                         'bg-gradient-to-br from-orange-500 to-red-500'
@@ -710,13 +741,27 @@ const AdminDashboard = memo(() => {
                         {u.name.charAt(0)}
                       </div>
 
-                      <p className="font-semibold text-slate-800 text-[10px] sm:text-xs md:text-sm truncate w-full">{u.name}</p>
-                      <p className="text-[9px] sm:text-[10px] md:text-xs text-orange-500 font-semibold mt-0.5 sm:mt-1">
-                        {u.role === 'student' ? `Reg: ${u.uid || 'N/A'}` : `Faculty • UID: ${u.uid || 'N/A'}`}
+                      <p className="font-semibold text-slate-800 text-[9px] sm:text-xs md:text-sm truncate w-full">{u.name}</p>
+                      <p className="text-[8px] sm:text-[10px] md:text-xs text-orange-500 font-semibold">
+                        {u.role === 'student' ? `${u.uid || 'N/A'}` : `${u.uid || 'N/A'}`}
                       </p>
                       {u.role === 'student' && (
-                        <div className="flex gap-1 mt-1.5">
-                          <span className="text-[8px] sm:text-[9px] bg-cyan-100 text-cyan-600 px-1.5 sm:px-2 py-0.5 rounded font-semibold">{u.batch || 'NA'}</span>
+                        <div className="flex flex-col gap-1 mt-1">
+                          {u.batch && (
+                            <span className="text-[7px] sm:text-[9px] bg-cyan-100 text-cyan-600 px-1 sm:px-2 py-0.5 rounded font-semibold">{u.batch}</span>
+                          )}
+                          {u.electiveBatch && (
+                            <span className="text-[7px] sm:text-[9px] bg-amber-100 text-amber-600 px-1 sm:px-2 py-0.5 rounded font-semibold">{u.electiveBatch}</span>
+                          )}
+                        </div>
+                      )}
+                      {u.role === 'hod' && (
+                        <div className="mt-1">
+                          {u.verified ? (
+                            <span className="text-[7px] sm:text-[9px] bg-green-100 text-green-600 px-1 sm:px-2 py-0.5 rounded font-semibold">✓ Verified</span>
+                          ) : (
+                            <span className="text-[7px] sm:text-[9px] bg-red-100 text-red-600 px-1 sm:px-2 py-0.5 rounded font-semibold">⏳ Pending</span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -724,9 +769,9 @@ const AdminDashboard = memo(() => {
                     {!deleteMode && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDelete('user', u._id); }} 
-                        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 bg-red-100 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"
+                        className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 p-1 bg-red-100 text-red-500 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"
                       >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4"/>
+                        <Trash2 className="w-3 h-3"/>
                       </button>
                     )}
                   </motion.div>
@@ -888,7 +933,7 @@ const AdminDashboard = memo(() => {
                   <h3 className="text-sm sm:text-base md:text-lg font-bold text-slate-800">Create Batch</h3>
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); handleCreate('batch', batch, () => setBatch({ name: '', studentCount: 50, semester: 1, department: 'MCA', subjects: [] })); }} className="space-y-3 sm:space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleCreate('batch', batch, () => setBatch({ name: '', studentCount: 50, semester: 1, department: 'MCA', subjects: [], isElective: false })); }} className="space-y-3 sm:space-y-4">
                   <input 
                     className="w-full p-2.5 sm:p-3 bg-slate-100 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-purple-400 focus:bg-white transition-all" 
                     placeholder="Batch Name (e.g. D2421)" 
@@ -909,31 +954,20 @@ const AdminDashboard = memo(() => {
                     />
                   </div>
 
-                  <div className="space-y-2 sm:space-y-3">
-                    <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Select Subjects</label>
-                    <div className="grid grid-cols-2 gap-2 max-h-[100px] sm:max-h-[120px] md:max-h-[150px] overflow-y-auto p-3 sm:p-4 bg-slate-100 rounded-lg sm:rounded-xl border border-slate-200">
-                      {subjectList.map(sub => (
-                        <label 
-                          key={sub._id} 
-                          className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg border cursor-pointer transition-all text-[10px] sm:text-xs ${
-                            batch.subjects?.includes(sub._id) 
-                              ? 'bg-purple-100 border-purple-400' 
-                              : 'bg-white border-slate-200 hover:border-purple-300'
-                          }`}
-                        >
-                          <input 
-                            type="checkbox" 
-                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 accent-purple-600" 
-                            checked={batch.subjects?.includes(sub._id)} 
-                            onChange={() => toggleSubjectInBatch(sub._id)} 
-                          />
-                          <span className="font-medium text-slate-700 truncate">{sub.name}</span>
-                        </label>
-                      ))}
+                  <label className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg cursor-pointer hover:border-amber-400 transition-all">
+                    <input 
+                      type="checkbox"
+                      className="w-4 h-4 accent-amber-500"
+                      checked={batch.isElective}
+                      onChange={e => setBatch({ ...batch, isElective: e.target.checked })}
+                    />
+                    <div>
+                      <p className="font-semibold text-slate-800 text-sm">Elective Batch</p>
+                      <p className="text-[10px] text-slate-500">Optional batch for elective subjects</p>
                     </div>
-                  </div>
+                  </label>
 
-                  <button 
+                  <button
                     type="submit"
                     className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-lg sm:rounded-xl shadow-lg hover:shadow-xl transition-shadow text-xs sm:text-sm"
                   >
@@ -956,9 +990,18 @@ const AdminDashboard = memo(() => {
                     <div 
                       key={b._id}
                       onClick={() => setViewBatchDetails(b)}
-                      className="relative p-3 sm:p-4 md:p-5 bg-slate-50 border-2 border-slate-100 rounded-lg sm:rounded-xl cursor-pointer group hover:border-purple-300 hover:bg-purple-50 transition-all"
+                      className={`relative p-3 sm:p-4 md:p-5 border-2 rounded-lg sm:rounded-xl cursor-pointer group transition-all ${
+                        b.isElective 
+                          ? 'bg-amber-50 border-amber-200 hover:border-amber-400' 
+                          : 'bg-slate-50 border-slate-100 hover:border-purple-300 hover:bg-purple-50'
+                      }`}
                     >
-                      <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 mb-2"/>
+                      {b.isElective && (
+                        <span className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-white text-[8px] font-bold rounded">
+                          ELECTIVE
+                        </span>
+                      )}
+                      <GraduationCap className={`w-5 h-5 sm:w-6 sm:h-6 mb-2 ${b.isElective ? 'text-amber-500' : 'text-purple-500'}`}/>
                       <h4 className="font-bold text-slate-800 text-sm sm:text-base">{b.name}</h4>
                       <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{b.studentCount} Students</p>
                       
@@ -998,9 +1041,17 @@ const AdminDashboard = memo(() => {
                         </div>
                         <div>
                           <h2 className="text-lg sm:text-xl font-bold text-slate-800">Batch: {viewBatchDetails.name}</h2>
-                          <p className="text-xs sm:text-sm font-medium text-slate-500">
-                            {allUsers.filter(u => u.batch === viewBatchDetails.name).length} Students
-                          </p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs sm:text-sm font-medium text-slate-500">
+                              Total: {allUsers.filter(u => u.batch === viewBatchDetails.name).length} Students
+                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-semibold">
+                              G1: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G1').length}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full font-semibold">
+                              G2: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G2').length}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <button 
@@ -1033,34 +1084,85 @@ const AdminDashboard = memo(() => {
                       <div className="space-y-2 max-h-[250px] sm:max-h-[300px] md:max-h-[350px] overflow-y-auto">
                         {studentList.filter(s => 
                           s.name.toLowerCase().includes(batchStudentSearch.toLowerCase()) || 
-                          (s.batch && s.batch.toLowerCase().includes(batchStudentSearch.toLowerCase()))
+                          (s.batch && s.batch.toLowerCase().includes(batchStudentSearch.toLowerCase())) ||
+                          (s.electiveBatch && s.electiveBatch.toLowerCase().includes(batchStudentSearch.toLowerCase()))
                         ).map(s => (
                           <div key={s._id} className="p-2.5 sm:p-3 bg-slate-50 border border-slate-100 rounded-lg sm:rounded-xl flex items-center justify-between group hover:border-purple-200 transition-all min-h-[48px] sm:min-h-[56px]">
                             <div className="flex items-center gap-2 sm:gap-3">
-                              <div className={`w-2 h-2 rounded-full ${s.batch === viewBatchDetails.name ? 'bg-emerald-500' : 'bg-slate-300'}`}/>
+                              <div className={`w-2 h-2 rounded-full ${
+                                viewBatchDetails.isElective 
+                                  ? (s.electiveBatch === viewBatchDetails.name ? 'bg-amber-500' : 'bg-slate-300')
+                                  : (s.batch === viewBatchDetails.name ? 'bg-emerald-500' : 'bg-slate-300')
+                              }`}/>
                               <div>
-                                <p className="font-semibold text-slate-800 text-xs sm:text-sm">{s.name}</p>
-                                <p className="text-[10px] sm:text-xs text-slate-500">{s.batch || 'NA'}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-slate-800 text-xs sm:text-sm">{s.name}</p>
+                                  {s.group === 'G1' && <span className="text-[8px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded font-bold">G1</span>}
+                                  {s.group === 'G2' && <span className="text-[8px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded font-bold">G2</span>}
+                                  {s.electiveBatch && (
+                                    <span className="text-[8px] px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded font-bold">E</span>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 text-[10px] sm:text-xs text-slate-500">
+                                  <span>Batch: {s.batch || 'NA'}</span>
+                                  {s.electiveBatch && <span className="text-amber-600">Elective: {s.electiveBatch}</span>}
+                                </div>
                               </div>
                             </div>
-                            {s.batch === viewBatchDetails.name ? (
-                              <button 
-                                onClick={() => assignStudentToBatch(s._id, '')}
-                                className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-red-100 text-red-600 rounded-lg font-semibold text-[10px] sm:text-xs hover:bg-red-500 hover:text-white transition-all"
-                              >
-                                Remove
-                              </button>
-                            ) : s.batch ? (
-                              <span className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-amber-100 text-amber-600 rounded-lg font-semibold text-[10px] sm:text-xs">
-                                {s.batch}
-                              </span>
+                            
+                            {viewBatchDetails.isElective ? (
+                              s.electiveBatch === viewBatchDetails.name ? (
+                                <button 
+                                  onClick={() => assignStudentToBatch(s._id, '', null)}
+                                  className="px-2 py-1 bg-red-100 text-red-600 rounded-lg font-semibold text-[10px] hover:bg-red-500 hover:text-white transition-all"
+                                >
+                                  Remove
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => {
+                                    const electiveName = viewBatchDetails.name;
+                                    console.log('Add Elective clicked:', { studentId: s._id, batchName: electiveName });
+                                    assignStudentToBatch(s._id, '', null, electiveName);
+                                  }}
+                                  className="px-2 py-1 bg-amber-500 text-white rounded-lg font-semibold text-[10px] hover:bg-amber-600 transition-all"
+                                >
+                                  + Add Elective
+                                </button>
+                              )
                             ) : (
-                              <button 
-                                onClick={() => assignStudentToBatch(s._id, viewBatchDetails.name)}
-                                className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-purple-500 text-white rounded-lg font-semibold text-[10px] sm:text-xs hover:bg-purple-600 transition-all"
-                              >
-                                Add
-                              </button>
+                              // Regular batch logic
+                              s.batch === viewBatchDetails.name ? (
+                                <div className="flex gap-1">
+                                  <button 
+                                    onClick={() => assignStudentToBatch(s._id, '')}
+                                    className="px-2 py-1 bg-red-100 text-red-600 rounded-lg font-semibold text-[10px] hover:bg-red-500 hover:text-white transition-all"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ) : s.batch ? (
+                                <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-semibold text-[10px]">
+                                  {s.batch}
+                                </span>
+                              ) : (
+                                <div className="flex gap-1">
+                                  <button 
+                                    onClick={() => assignStudentToBatch(s._id, viewBatchDetails.name, 'G1')}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded-lg font-semibold text-[10px] hover:bg-blue-600 transition-all"
+                                    title="Add to G1"
+                                  >
+                                    +G1
+                                  </button>
+                                  <button 
+                                    onClick={() => assignStudentToBatch(s._id, viewBatchDetails.name, 'G2')}
+                                    className="px-2 py-1 bg-purple-500 text-white rounded-lg font-semibold text-[10px] hover:bg-purple-600 transition-all"
+                                    title="Add to G2"
+                                  >
+                                    +G2
+                                  </button>
+                                </div>
+                              )
                             )}
                           </div>
                         ))}
@@ -1276,12 +1378,12 @@ const AdminDashboard = memo(() => {
                   {messages.map((m) => (
                     <div 
                       key={m._id}
-                      className="relative p-3 sm:p-4 bg-slate-50 border border-slate-100 rounded-lg sm:rounded-xl overflow-hidden group hover:border-red-200 transition-all"
+                      className="relative p-3 sm:p-4 bg-slate-50 border border-slate-100 rounded-lg sm:rounded-xl overflow-hidden hover:border-red-200 transition-all"
                     >
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-500 to-red-600"/>
                       
                       <div className="flex justify-between items-start pl-3 sm:pl-4">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
                             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-lg sm:rounded-lg flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
                               {m.senderName?.charAt(0)}
@@ -1291,13 +1393,14 @@ const AdminDashboard = memo(() => {
                               <p className="text-slate-400 text-[9px] sm:text-xs">{new Date(m.createdAt).toLocaleString()}</p>
                             </div>
                           </div>
-                          <p className="text-slate-700 text-xs sm:text-sm font-medium pl-8 sm:pl-11">"{m.content}"</p>
+                          <p className="text-slate-700 text-xs sm:text-sm font-medium">"{m.content}"</p>
                         </div>
                         <button 
                           onClick={() => handleDelete('message', m._id)} 
-                          className="p-1.5 sm:p-2 bg-slate-100 text-slate-400 rounded-lg hover:text-red-500 hover:bg-red-50 transition-all"
+                          className="ml-2 p-2 sm:p-2.5 bg-red-100 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all flex-shrink-0"
+                          title="Delete Message"
                         >
-                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4"/>
+                          <Trash2 className="w-4 h-4 sm:w-5 sm:h-5"/>
                         </button>
                       </div>
                     </div>
@@ -1387,17 +1490,38 @@ const AdminDashboard = memo(() => {
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-red-500/10 to-transparent rounded-full blur-3xl"/>
               
               <div className="relative p-6 sm:p-8">
-                {/* Close Button */}
-                <motion.button 
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setViewingUser(null)} 
-                  className="absolute top-4 right-4 p-2.5 bg-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/20 transition-all z-10"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </motion.button>
+                {/* Top Buttons Row */}
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  {/* Delete Button - Only for non-admin users */}
+                  {viewingUser.role !== 'admin' && (
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={async () => {
+                        const confirm = await confirmDialog("Delete User?", `Are you sure you want to delete ${viewingUser.name}?`);
+                        if (confirm) {
+                          handleDelete('user', viewingUser._id);
+                          setViewingUser(null);
+                        }
+                      }} 
+                      className="p-2.5 bg-red-500/20 rounded-xl text-red-400 hover:text-white hover:bg-red-500 transition-all"
+                    >
+                      <Trash2 className="w-5 h-5"/>
+                    </motion.button>
+                  )}
+                  
+                  {/* Close Button */}
+                  <motion.button 
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setViewingUser(null)} 
+                    className="p-2.5 bg-white/10 rounded-xl text-white/60 hover:text-white hover:bg-white/20 transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </motion.button>
+                </div>
 
                 <div className="flex flex-col items-center text-center">
                   
@@ -1564,20 +1688,76 @@ const AdminDashboard = memo(() => {
                     )}
 
                     {/* Student Info */}
-                    {viewingUser.role === 'student' && viewingUser.batch && (
+                    {viewingUser.role === 'student' && (
                       <motion.div 
-                        className="grid grid-cols-2 gap-3"
+                        className="space-y-3"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
                       >
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
-                          <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Roll No</p>
-                          <p className="text-white text-2xl font-black">{viewingUser.rollNo || '0'}</p>
+                        {/* Batch Display */}
+                        <div className="flex gap-2 flex-wrap">
+                          {viewingUser.batch && (
+                            <div className="flex-1 min-w-[120px] p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/30 text-center">
+                              <p className="text-cyan-400 text-[10px] uppercase font-bold tracking-wider mb-1">Regular Batch</p>
+                              <p className="text-white text-lg font-black">{viewingUser.batch}</p>
+                            </div>
+                          )}
+                          {viewingUser.electiveBatch && (
+                            <div className="flex-1 min-w-[120px] p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 text-center">
+                              <p className="text-amber-400 text-[10px] uppercase font-bold tracking-wider mb-1">Elective Batch</p>
+                              <p className="text-white text-lg font-black">{viewingUser.electiveBatch}</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
-                          <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Group</p>
-                          <p className="text-cyan-400 text-2xl font-black">{viewingUser.group || 'N/A'}</p>
+                        {/* Roll No & Group */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
+                            <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Roll No</p>
+                            <p className="text-white text-2xl font-black">{viewingUser.rollNo || '0'}</p>
+                          </div>
+                          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
+                            <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Group</p>
+                            <p className="text-cyan-400 text-2xl font-black">{viewingUser.group || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* HOD Verification */}
+                    {viewingUser.role === 'hod' && (
+                      <motion.div 
+                        className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <ShieldCheck className="text-amber-400 w-5 h-5"/>
+                          <span className="text-amber-400 text-xs font-bold uppercase tracking-wider">HOD Verification</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-slate-300 text-sm">Status:</p>
+                            <p className={`text-lg font-black ${viewingUser.verified ? 'text-green-400' : 'text-red-400'}`}>
+                              {viewingUser.verified ? '✓ Verified' : '⏳ Pending Verification'}
+                            </p>
+                            <p className="text-slate-500 text-[10px] mt-1">
+                              {viewingUser.verified 
+                                ? 'HOD can access all features' 
+                                : 'Admin must verify before HOD can work'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleVerifyHOD(viewingUser._id, !viewingUser.verified)}
+                            className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                              viewingUser.verified 
+                                ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                                : 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
+                            }`}
+                          >
+                            {viewingUser.verified ? 'Revoke Access' : 'Verify HOD'}
+                          </button>
                         </div>
                       </motion.div>
                     )}

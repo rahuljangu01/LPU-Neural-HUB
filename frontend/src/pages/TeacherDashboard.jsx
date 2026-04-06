@@ -30,6 +30,7 @@ const TeacherDashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [reminder, setReminder] = useState(null); 
   const [lastNotifiedId, setLastNotifiedId] = useState(null);
+  const [electiveBatches, setElectiveBatches] = useState([]);
 
   const facultyName = localStorage.getItem('userName') || 'Faculty';
   const facultyUid = localStorage.getItem('userUid') || '';
@@ -55,14 +56,22 @@ const TeacherDashboard = () => {
   const fetchHubData = useCallback(async () => {
     try {
       setLoading(true);
-      const [timeRes, userRes] = await Promise.all([
+      const [timeRes, userRes, batchRes] = await Promise.all([
         API.get('/timetable'),
-        API.get('/auth/users')
+        API.get('/auth/users'),
+        API.get('/batches')
       ]);
       const myClasses = timeRes.data.filter(item => 
         item.facultyName === facultyName || item.faculty?.name === facultyName
       );
-      setTimetable(myClasses);
+      // Mark elective classes
+      const electiveBatchNames = (batchRes.data || []).filter(b => b.isElective).map(b => b.name);
+      setElectiveBatches(electiveBatchNames);
+      const markedClasses = myClasses.map(c => ({
+        ...c,
+        isElective: electiveBatchNames.includes(c.batch)
+      }));
+      setTimetable(markedClasses);
       const profile = userRes.data.find(u => u.name === facultyName);
       setFacultyData(profile);
     } catch (err) {
@@ -449,66 +458,184 @@ const TeacherDashboard = () => {
                 </motion.button>
               </div>
               
-              <ZoomableTimetable>
-                <div className="min-w-[700px]">
-                  <div className="grid grid-cols-7 gap-2 md:gap-4">
-                    <div className="col-span-1 space-y-2 md:space-y-4 pt-8 md:pt-16 text-right pr-2">
-                      {timeSlots.map(s => (
-                        <div key={s} className="h-12 md:h-20 flex items-center justify-end text-[8px] md:text-xs font-bold text-slate-500 uppercase">{s.split(' - ')[0]}</div>
+              {/* DESKTOP VIEW */}
+              <div className="hidden md:block">
+                <ZoomableTimetable>
+                  <div className="min-w-[900px]">
+                    <div className="grid grid-cols-7 gap-4">
+                      <div className="col-span-1 space-y-4 pt-16 text-right pr-2">
+                        {timeSlots.map(s => (
+                          <div key={s} className="h-20 flex items-center justify-end text-xs font-bold text-slate-500 uppercase">{s.split(' - ')[0]}</div>
+                        ))}
+                      </div>
+                      {days.map(day => (
+                        <div key={day} className="col-span-1 space-y-4 text-center">
+                          <h1 className={`text-sm font-bold uppercase tracking-wider pb-8 border-b border-white/5 mb-8 ${
+                            day === currentDay ? 'text-red-400' : 'text-slate-300'
+                          }`}>
+                            {day.slice(0, 3)}
+                          </h1>
+                          {timeSlots.map((slot, i) => {
+                            const session = timetable.find(t => t.day === day && t.timeSlot === slot);
+                            const isLive = day === currentDay && stats.currentClass?.timeSlot === slot;
+                            const isElective = session?.isElective;
+                            const baseColor = isElective ? 'amber' : 'red';
+                            return (
+                              <motion.div 
+                                key={i} 
+                                whileHover={{ scale: 1.02 }}
+                                className={`h-24 rounded-xl border flex flex-col items-center justify-center p-3 transition-all ${
+                                  session 
+                                    ? isLive 
+                                      ? 'bg-gradient-to-br from-red-500 to-rose-600 border-white shadow-lg shadow-red-500/30' 
+                                      : `bg-${baseColor}-500/20 border-${baseColor}-500/50`
+                                    : 'bg-white/5 border-transparent'
+                                }`}
+                              >
+                                {session ? (
+                                  <>
+                                    <p className={`text-[9px] font-bold uppercase truncate w-full leading-tight ${isLive ? 'text-white' : `text-${baseColor}-400`}`}>
+                                      {session.subject}
+                                    </p>
+                                    <p className={`text-[7px] truncate w-full ${isLive ? 'text-white/80' : `text-${baseColor}-300`}`}>
+                                      {session.subjectCode}
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <div className={`px-1.5 py-0.5 rounded text-[6px] font-bold ${
+                                        session.type?.toLowerCase().includes('lab') || session.type?.toLowerCase().includes('practical')
+                                          ? 'bg-purple-500 text-white'
+                                          : 'bg-blue-500 text-white'
+                                      }`}>
+                                        {session.type?.toLowerCase().includes('lab') || session.type?.toLowerCase().includes('practical') ? 'P' : 'L'}
+                                      </div>
+                                      {isElective && (
+                                        <div className="px-1 py-0.5 bg-amber-500 text-white rounded text-[6px] font-bold">
+                                          E
+                                        </div>
+                                      )}
+                                      <div className={`px-1.5 py-0.5 rounded text-[7px] font-bold ${
+                                        isLive ? 'bg-white text-red-600' : `bg-${baseColor}-500 text-white`
+                                      }`}>
+                                        R-{session.room}
+                                      </div>
+                                    </div>
+                                    {session.batch && (
+                                      <p className={`text-[6px] mt-0.5 ${isLive ? 'text-white/70' : 'text-slate-400'}`}>
+                                        {session.batch}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-[5px] text-slate-600 uppercase">-</span>
+                                )}
+                              </motion.div>
+                            )
+                          })}
+                        </div>
                       ))}
                     </div>
+                  </div>
+                </ZoomableTimetable>
+              </div>
+
+              {/* MOBILE VIEW - Horizontal Day Scroll */}
+              <div className="md:hidden">
+                <ZoomableTimetable>
+                  <div className="flex gap-3 pb-4 overflow-x-auto snap-x snap-mandatory">
                     {days.map(day => (
-                      <div key={day} className="col-span-1 space-y-2 md:space-y-4 text-center">
-                        <h1 className={`text-[10px] md:text-sm font-bold uppercase tracking-wider pb-4 md:pb-8 border-b border-white/5 mb-4 md:mb-8 ${
-                          day === currentDay ? 'text-red-400' : 'text-slate-300'
+                      <div 
+                        key={day} 
+                        className="flex-shrink-0 w-[140px] snap-center"
+                      >
+                        <div className={`text-center py-2 mb-3 rounded-lg ${
+                          day === currentDay ? 'bg-red-500/20 border border-red-500/50' : 'bg-slate-800/50'
                         }`}>
-                          {day.slice(0, 3)}
-                        </h1>
-                        {timeSlots.map((slot, i) => {
-                          const session = timetable.find(t => t.day === day && t.timeSlot === slot);
-                          const isLive = day === currentDay && stats.currentClass?.timeSlot === slot;
-                          return (
-                            <motion.div 
-                              key={i} 
-                              whileHover={{ scale: 1.02 }}
-                              className={`h-14 md:h-24 rounded-lg md:rounded-xl border flex flex-col items-center justify-center p-1 md:p-3 transition-all ${
-                                session 
-                                  ? isLive 
-                                    ? 'bg-gradient-to-br from-red-500 to-rose-600 border-white shadow-lg shadow-red-500/30' 
-                                    : 'bg-red-500/20 border-red-500/50'
-                                  : 'bg-white/5 border-transparent'
-                              }`}
-                            >
-                              {session ? (
-                                <>
-                                  <p className={`text-[6px] md:text-[9px] font-bold uppercase truncate w-full leading-tight ${isLive ? 'text-white' : 'text-red-400'}`}>
-                                    {session.subject}
-                                  </p>
-                                  <p className={`text-[5px] md:text-[7px] truncate w-full ${isLive ? 'text-red-200' : 'text-red-300'}`}>
-                                    {session.subjectCode}
-                                  </p>
-                                  <div className={`mt-0.5 md:mt-1 px-1 md:px-2 py-0.5 rounded text-[5px] md:text-[7px] font-bold ${
-                                    isLive ? 'bg-white text-red-600' : 'bg-red-500 text-white'
-                                  }`}>
-                                    R-{session.room}
-                                  </div>
-                                  {session.batch && (
-                                    <p className={`text-[4px] md:text-[6px] mt-0.5 ${isLive ? 'text-white/70' : 'text-slate-400'}`}>
-                                      {session.batch}
+                          <h1 className={`text-xs font-bold uppercase tracking-wider ${
+                            day === currentDay ? 'text-red-400' : 'text-slate-300'
+                          }`}>
+                            {day.slice(0, 3)}
+                          </h1>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {timeSlots.map((slot, i) => {
+                            const session = timetable.find(t => t.day === day && t.timeSlot === slot);
+                            const isLive = day === currentDay && stats.currentClass?.timeSlot === slot;
+                            const isElective = session?.isElective;
+                            const baseColor = isElective ? 'amber' : 'red';
+                            return (
+                              <motion.div 
+                                key={i}
+                                whileHover={{ scale: 1.05 }}
+                                className={`rounded-lg border p-2 min-h-[70px] ${
+                                  session 
+                                    ? isLive 
+                                      ? 'bg-gradient-to-br from-red-500 to-rose-600 border-white shadow-lg' 
+                                      : `bg-${baseColor}-500/20 border-${baseColor}-500/50`
+                                    : 'bg-white/5 border-transparent'
+                                }`}
+                              >
+                                <p className="text-[8px] text-slate-500 font-bold mb-1">
+                                  {slot.split(' - ')[0]}
+                                </p>
+                                
+                                {session ? (
+                                  <>
+                                    <p className={`text-[9px] font-bold uppercase truncate leading-tight ${
+                                      isLive ? 'text-white' : `text-${baseColor}-400`
+                                    }`}>
+                                      {session.subject}
                                     </p>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-[5px] text-slate-600 uppercase">-</span>
-                              )}
-                            </motion.div>
-                          )
-                        })}
+                                    <p className={`text-[7px] truncate ${
+                                      isLive ? 'text-white/80' : `text-${baseColor}-300`
+                                    }`}>
+                                      {session.subjectCode}
+                                    </p>
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <div className={`px-1 py-0.5 rounded text-[6px] font-bold ${
+                                        session.type?.toLowerCase().includes('lab') || session.type?.toLowerCase().includes('practical')
+                                          ? 'bg-purple-500 text-white'
+                                          : 'bg-blue-500 text-white'
+                                      }`}>
+                                        {session.type?.toLowerCase().includes('lab') || session.type?.toLowerCase().includes('practical') ? 'P' : 'L'}
+                                      </div>
+                                      {isElective && (
+                                        <div className="px-1 py-0.5 bg-amber-500 text-white rounded text-[6px] font-bold">
+                                          E
+                                        </div>
+                                      )}
+                                      <div className={`px-1.5 py-0.5 rounded text-[7px] font-bold ${
+                                        isLive ? 'bg-white text-red-600' : `bg-${baseColor}-500 text-white`
+                                      }`}>
+                                        R-{session.room}
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <span className="text-[6px] text-slate-600 uppercase">-</span>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
                       </div>
                     ))}
                   </div>
+                </ZoomableTimetable>
+                <p className="text-[10px] text-slate-500 text-center mt-2">← Swipe to see more days →</p>
+                
+                {/* LEGEND */}
+                <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-red-500/30 rounded"></div>
+                    <span className="text-slate-400">Regular</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-amber-500/30 rounded"></div>
+                    <span className="text-slate-400">Elective (E badge)</span>
+                  </div>
                 </div>
-              </ZoomableTimetable>
+              </div>
             </motion.div>
           )}
 

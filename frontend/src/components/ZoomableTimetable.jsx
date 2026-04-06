@@ -148,13 +148,6 @@ const ZoomableTimetable = ({ children, className = "" }) => {
         </div>
       )}
 
-      {/* Zoom Hint - Only on Mobile */}
-      {zoom === 1 && (
-        <div className="absolute top-2 right-2 z-40 bg-black/60 text-white text-[10px] px-2 py-1 rounded opacity-60 pointer-events-none">
-          Pinch to zoom
-        </div>
-      )}
-
       {/* Zoomable Container - Only on Mobile */}
       <div
         ref={containerRef}

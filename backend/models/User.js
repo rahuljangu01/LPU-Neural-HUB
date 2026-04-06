@@ -19,11 +19,15 @@ const UserSchema = new mongoose.Schema({
         type: String, 
         enum: ['admin', 'hod', 'faculty', 'student'], 
         required: true,
-        lowercase: true // Taaki 'Faculty' aur 'faculty' ka locha na ho
+        lowercase: true
     },
     department: { 
         type: String, 
-        required: true // Har user kisi dept ka hona chahiye (MCA, CSE, etc.)
+        required: true
+    },
+    verified: { 
+        type: Boolean, 
+        default: false // HOD accounts need admin verification
     },
     uid: { 
         type: String, 
@@ -48,6 +52,10 @@ const UserSchema = new mongoose.Schema({
     batch: { 
         type: String, 
         default: '' // MCA-1, BTech-3 etc. (Student isi batch ka timetable dekhega)
+    },
+    electiveBatch: { 
+        type: String, 
+        default: '' // Elective batch name for elective subjects
     },
     rollNo: { type: Number, default: 0 },
     group: { type: String, enum: ['G1', 'G2', 'N/A'], default: 'N/A' },

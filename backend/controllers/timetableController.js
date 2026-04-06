@@ -2,10 +2,10 @@ const Timetable = require('../models/Timetable');
 const Room = require('../models/Room');
 const User = require('../models/User');
 
-// 1. AI BULK DEPLOYMENT - COMPLETELY REPLACE old timetable
+// 1. AI BULK DEPLOYMENT - Replace timetable for specific batch
 exports.addBulkSlots = async (req, res) => {
     try {
-        const { schedule } = req.body;
+        const { schedule, batchId } = req.body;
 
         if (!schedule || schedule.length === 0) {
             return res.status(400).json({ msg: "No schedule data received from AI Engine." });
@@ -13,28 +13,22 @@ exports.addBulkSlots = async (req, res) => {
 
         console.log('📥 addBulkSlots received:', {
             count: schedule.length,
-            batches: [...new Set(schedule.map(slot => slot.batch))]
+            batches: [...new Set(schedule.map(slot => slot.batch))],
+            batchId: batchId
         });
 
-        // COMPLETELY DELETE all timetable entries first
-        await Timetable.deleteMany({});
+        // Only delete timetable for the specific batch being deployed
+        const batchesToReplace = [...new Set(schedule.map(slot => slot.batch))];
+        await Timetable.deleteMany({ batch: { $in: batchesToReplace } });
 
         const finalSchedule = await Promise.all(schedule.map(async (slot) => {
             const facultyUser = await User.findOne({ uid: slot.facultyUid});
             
-            // Extract G1/G2 from batch name - more robust check
+            // Use subGroup from schedule data
+            const groupValue = slot.subGroup || slot.studentGroup;
             let studentGroup = '0';
-            if (slot.batch) {
-                const batchStr = slot.batch.toString();
-                const batchUpper = batchStr.toUpperCase();
-                const batchClean = batchUpper.replace(/\s+/g, '');
-                
-                // Check for G1 or G2 at end or anywhere in batch name
-                if (/G1$/i.test(batchStr) || batchClean.endsWith('G1') || /\sG1$/i.test(batchStr)) {
-                    studentGroup = 'G1';
-                } else if (/G2$/i.test(batchStr) || batchClean.endsWith('G2') || /\sG2$/i.test(batchStr)) {
-                    studentGroup = 'G2';
-                }
+            if (groupValue === 'G1' || groupValue === 'G2') {
+                studentGroup = groupValue;
             }
             
             const entry = {
