@@ -998,11 +998,8 @@ const AdminDashboard = memo(() => {
                         </div>
                         <div>
                           <h2 className="text-lg sm:text-xl font-bold text-slate-800">Batch: {viewBatchDetails.name}</h2>
-                          <p className={`text-xs sm:text-sm font-medium ${allUsers.filter(u => u.batch === viewBatchDetails.name).length >= viewBatchDetails.studentCount ? 'text-red-500' : 'text-slate-500'}`}>
-                            {allUsers.filter(u => u.batch === viewBatchDetails.name).length} / {viewBatchDetails.studentCount} Students
-                            {allUsers.filter(u => u.batch === viewBatchDetails.name).length >= viewBatchDetails.studentCount && (
-                              <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-[10px] sm:text-xs rounded-full">FULL</span>
-                            )}
+                          <p className="text-xs sm:text-sm font-medium text-slate-500">
+                            {allUsers.filter(u => u.batch === viewBatchDetails.name).length} Students
                           </p>
                         </div>
                       </div>
