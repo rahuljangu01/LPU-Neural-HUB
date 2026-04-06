@@ -327,47 +327,44 @@ const HODDashboard = () => {
         const batch = cls.batch || '';
         const subject = cls.subject || '';
         
-        // Debug: Show what we're detecting
-        console.log('📤 Processing:', { batch, studentGroup: cls.studentGroup });
-        
-        // AttendanceType: Check type field OR subject name for "lab"
-        let attendanceType = "Lecture";
+        // AttendanceType: L for Lecture, P for Practical
+        let attendanceType = "L";
         if (cls.type) {
           const type = cls.type.toLowerCase();
           if (type === 'lab' || type === 'practical' || type.includes('lab')) {
-            attendanceType = "Practical";
+            attendanceType = "P";
           }
         } else if (subject.toLowerCase().includes('lab')) {
-          attendanceType = "Practical";
+          attendanceType = "P";
         }
         
         // StudentGroup: Check studentGroup field OR batch name for G1/G2
-        let studentGroup = "Full Batch";
+        let studentGroup = "0"; // Full Batch = 0
         
         // Check studentGroup field first
         if (cls.studentGroup) {
           const sg = cls.studentGroup.toString().toUpperCase();
           if (sg === 'G1' || sg === 'G2') {
             studentGroup = cls.studentGroup.toString();
-            console.log('📤 Detected from field:', studentGroup);
           }
         }
         
         // Check batch name for G1/G2
-        if (studentGroup === "Full Batch") {
+        if (studentGroup === "0") {
           const batchUpper = batch.toUpperCase();
-          console.log('📤 Checking batch:', batchUpper);
-          
-          // Remove spaces and check
           const batchNoSpace = batchUpper.replace(/\s+/g, '');
           if (batchNoSpace.endsWith('G1') || batchUpper.includes(' G1') || batchUpper.includes('G1')) {
             studentGroup = 'G1';
-            console.log('📤 Detected G1 from batch');
           } else if (batchNoSpace.endsWith('G2') || batchUpper.includes(' G2') || batchUpper.includes('G2')) {
             studentGroup = 'G2';
-            console.log('📤 Detected G2 from batch');
           }
         }
+        
+        // Day format: Monday - Mon
+        const dayMap = { 'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun' };
+        const dayLower = (cls.day || '').toLowerCase();
+        const dayShort = dayMap[dayLower] || cls.day;
+        const dayDisplay = `${cls.day} - ${dayShort}`;
         
         const sectionName = (studentGroup === "Full Batch" || studentGroup === "G1" || studentGroup === "G2") 
           ? `${batch} ${studentGroup === "Full Batch" ? "" : studentGroup}`.trim()
@@ -376,7 +373,7 @@ const HODDashboard = () => {
         return {
           "RoomNumber": cls.room || cls.roomNumber || "N/A",
           "AttendanceType": attendanceType,
-          "AttendanceDay": cls.day,
+          "AttendanceDay": dayDisplay,
           "AttendanceTime": cls.timeSlot,
           "TeacherLogin": cls.faculty?.uid || cls.facultyUid || "N/A",
           "Section": sectionName || batchName,
