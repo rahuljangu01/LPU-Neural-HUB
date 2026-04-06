@@ -229,7 +229,31 @@ exports.getUsers = async (req, res) => {
     }
 };
 
-// 5. Update AI Node (Auto RollNo + Grouping Logic 1-25 G1, 26-50 G2)
+// Helper: Get next available roll number for a batch
+const getNextRollNo = async (batchName) => {
+    const students = await User.find({ batch: batchName, role: 'student' }).sort({ rollNo: 1 });
+    if (students.length === 0) return 1;
+    for (let i = 1; i <= students.length + 1; i++) {
+        if (!students.find(s => s.rollNo === i)) return i;
+    }
+    return students.length + 1;
+};
+
+// Helper: Re-number all students in a batch
+const renumberBatch = async (batchName) => {
+    const students = await User.find({ batch: batchName, role: 'student' }).sort({ rollNo: 1 });
+    const batchInfo = await Batch.findOne({ name: batchName });
+    const totalCapacity = batchInfo?.studentCount || 50;
+    const halfCapacity = Math.ceil(totalCapacity / 2);
+    
+    for (let i = 0; i < students.length; i++) {
+        const newRollNo = i + 1;
+        const newGroup = (newRollNo <= halfCapacity) ? 'G1' : 'G2';
+        await User.findByIdAndUpdate(students[i]._id, { rollNo: newRollNo, group: newGroup });
+    }
+};
+
+// 5. Update AI Node (Auto RollNo + Grouping Logic)
 exports.updateUserAI = async (req, res) => {
     try {
         const { userId, expertise, maxWorkload, avgLeaves, batch } = req.body;
@@ -244,9 +268,10 @@ exports.updateUserAI = async (req, res) => {
         if (batch !== undefined) {
             const user = await User.findById(userId);
             if (user && user.role === 'student') {
-                if (batch !== '' && user.batch !== batch) {
-                    const currentCount = await User.countDocuments({ batch: batch, role: 'student' });
-                    const newRollNo = currentCount + 1;
+                const oldBatch = user.batch;
+                
+                if (batch !== '' && oldBatch !== batch) {
+                    const newRollNo = await getNextRollNo(batch);
                     updateFields.rollNo = newRollNo;
                     updateFields.batch = batch;
                     
@@ -254,10 +279,13 @@ exports.updateUserAI = async (req, res) => {
                     const totalCapacity = batchInfo?.studentCount || 50;
                     const halfCapacity = Math.ceil(totalCapacity / 2);
                     updateFields.group = (newRollNo <= halfCapacity) ? 'G1' : 'G2';
+                    
+                    if (oldBatch) await renumberBatch(oldBatch);
                 } else if (batch === '') {
                     updateFields.batch = '';
                     updateFields.rollNo = 0;
                     updateFields.group = 'N/A';
+                    if (oldBatch) await renumberBatch(oldBatch);
                 } else {
                     updateFields.batch = batch;
                 }
