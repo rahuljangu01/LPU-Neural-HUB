@@ -22,14 +22,17 @@ exports.addBulkSlots = async (req, res) => {
         const finalSchedule = await Promise.all(schedule.map(async (slot) => {
             const facultyUser = await User.findOne({ uid: slot.facultyUid});
             
-            // Extract G1/G2 from batch name
-            let studentGroup = 'Full Batch';
+            // Extract G1/G2 from batch name - more robust check
+            let studentGroup = '0';
             if (slot.batch) {
-                const batchUpper = slot.batch.toUpperCase();
-                // Check for G1 or G2 at end of batch name
-                if (batchUpper.endsWith(' G1') || batchUpper.endsWith('G1')) {
+                const batchStr = slot.batch.toString();
+                const batchUpper = batchStr.toUpperCase();
+                const batchClean = batchUpper.replace(/\s+/g, '');
+                
+                // Check for G1 or G2 at end or anywhere in batch name
+                if (/G1$/i.test(batchStr) || batchClean.endsWith('G1') || /\sG1$/i.test(batchStr)) {
                     studentGroup = 'G1';
-                } else if (batchUpper.endsWith(' G2') || batchUpper.endsWith('G2')) {
+                } else if (/G2$/i.test(batchStr) || batchClean.endsWith('G2') || /\sG2$/i.test(batchStr)) {
                     studentGroup = 'G2';
                 }
             }

@@ -339,41 +339,34 @@ const HODDashboard = () => {
         }
         
         // StudentGroup: Check studentGroup field OR batch name for G1/G2
-        let studentGroup = "0"; // Full Batch = 0
+        let studentGroup = "0"; // Default: Full Batch = 0
         
-        // Check studentGroup field first
-        if (cls.studentGroup) {
-          const sg = cls.studentGroup.toString().toUpperCase();
-          if (sg === 'G1' || sg === 'G2') {
-            studentGroup = cls.studentGroup.toString();
-          }
-        }
-        
-        // Check batch name for G1/G2
-        if (studentGroup === "0") {
-          const batchUpper = batch.toUpperCase();
-          const batchNoSpace = batchUpper.replace(/\s+/g, '');
-          if (batchNoSpace.endsWith('G1') || batchUpper.includes(' G1') || batchUpper.includes('G1')) {
+        // Check studentGroup field first (from backend)
+        const sgField = cls.studentGroup?.toString().toUpperCase();
+        if (sgField === 'G1' || sgField === 'G2') {
+          studentGroup = cls.studentGroup.toString();
+        } else {
+          // Fallback: Check batch name using regex
+          const batchStr = batch.toString();
+          if (/G1$/i.test(batchStr) || /\sG1$/i.test(batchStr)) {
             studentGroup = 'G1';
-          } else if (batchNoSpace.endsWith('G2') || batchUpper.includes(' G2') || batchUpper.includes('G2')) {
+          } else if (/G2$/i.test(batchStr) || /\sG2$/i.test(batchStr)) {
             studentGroup = 'G2';
           }
         }
         
-        // Day format: Monday - Mon
+        // Day format: Short form only (Mon, Tue, Wed, Thu, Fri, Sat)
         const dayMap = { 'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun' };
         const dayLower = (cls.day || '').toLowerCase();
         const dayShort = dayMap[dayLower] || cls.day;
-        const dayDisplay = `${cls.day} - ${dayShort}`;
         
-        const sectionName = (studentGroup === "Full Batch" || studentGroup === "G1" || studentGroup === "G2") 
-          ? `${batch} ${studentGroup === "Full Batch" ? "" : studentGroup}`.trim()
-          : batch;
+        // Section: Use batch name with G1/G2 suffix if applicable
+        const sectionName = studentGroup === "0" ? batch : `${batch}`;
         
         return {
           "RoomNumber": cls.room || cls.roomNumber || "N/A",
           "AttendanceType": attendanceType,
-          "AttendanceDay": dayDisplay,
+          "AttendanceDay": dayShort,
           "AttendanceTime": cls.timeSlot,
           "TeacherLogin": cls.faculty?.uid || cls.facultyUid || "N/A",
           "Section": sectionName || batchName,
