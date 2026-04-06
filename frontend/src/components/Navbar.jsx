@@ -54,7 +54,18 @@ const Navbar = () => {
   const handleLogout = () => {
     setShowLogoutModal(false);
     setTimeout(() => {
-      localStorage.clear();
+      const readCountKeys = Object.keys(localStorage).filter(key => key.startsWith('lastReadCount_'));
+      const savedReadCounts = {};
+      readCountKeys.forEach(key => { savedReadCounts[key] = localStorage.getItem(key); });
+      
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userBatch');
+      localStorage.removeItem('userUid');
+      
+      Object.keys(savedReadCounts).forEach(key => { localStorage.setItem(key, savedReadCounts[key]); });
       navigate('/');
     }, 300);
   };
