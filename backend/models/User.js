@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema({
     },
     verified: { 
         type: Boolean, 
-        default: false // HOD accounts need admin verification
+        default: false // HOD accounts require admin approval
     },
     uid: { 
         type: String, 
@@ -35,23 +35,23 @@ const UserSchema = new mongoose.Schema({
         required: true
     },
 
-    // --- FACULTY / HOD PARAMETERS (AI Engine ke liye) ---
+    // Faculty / HOD parameters for AI scheduling
     maxWorkload: { 
         type: Number, 
-        default: 18 // Haftay mein max kitne ghante padha sakte hain
+        default: 18 // Max teaching hours per week
     },
     avgLeaves: { 
         type: Number, 
-        default: 2 // Monthly average leaves (AI buffer calculation ke liye)
+        default: 2 // Monthly average leaves for AI buffer calculation
     },
     expertise: [{ 
-        type: String // Subjects jo ye faculty padha sakti hai (AI Matching)
+        type: String // Subjects this faculty can teach (used for AI matching)
     }],
 
-    // --- STUDENT PARAMETERS ---
+    // Student parameters
     batch: { 
         type: String, 
-        default: '' // MCA-1, BTech-3 etc. (Student isi batch ka timetable dekhega)
+        default: '' // e.g., MCA-1, BTech-3 - determines which timetable the student sees
     },
     electiveBatch: { 
         type: String, 

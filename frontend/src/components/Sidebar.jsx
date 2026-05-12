@@ -105,7 +105,6 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* MOBILE HAMBURGER */}
       <div className="lg:hidden fixed top-4 left-4 z-[2000]">
         <motion.button 
           whileTap={{ scale: 0.9 }}
@@ -116,7 +115,6 @@ const Sidebar = () => {
         </motion.button>
       </div>
 
-      {/* OVERLAY */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -129,14 +127,12 @@ const Sidebar = () => {
         )}
       </AnimatePresence>
 
-      {/* SIDEBAR */}
       <motion.div 
         variants={sidebarVariants}
         initial="closed"
         animate={isOpen || window.innerWidth >= 1024 ? "open" : "closed"}
         className="h-screen fixed left-0 top-0 z-[1001] flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 backdrop-blur-xl border-r border-white/10 font-['Outfit'] w-72 overflow-hidden shadow-2xl"
       >
-        {/* Animated Glow Effects */}
         <motion.div 
           animate={{ 
             opacity: [0.15, 0.25, 0.15],
@@ -154,7 +150,6 @@ const Sidebar = () => {
           className="absolute bottom-20 right-0 w-32 h-32 bg-gradient-to-tl from-rose-500/10 to-transparent rounded-full blur-2xl pointer-events-none"
         />
 
-        {/* LOGO SECTION */}
         <div className="p-6 border-b border-white/10 shrink-0 relative">
           <motion.div 
             whileHover={{ scale: 1.02 }}
@@ -206,7 +201,6 @@ const Sidebar = () => {
           </motion.div>
         </div>
 
-        {/* USER PROFILE */}
         <div className="p-4 shrink-0 relative">
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
@@ -245,7 +239,6 @@ const Sidebar = () => {
           </motion.div>
         </div>
 
-        {/* NAVIGATION */}
         <nav className="flex-1 px-3 py-2 overflow-y-auto custom-scroll">
           <div className="space-y-1">
             {navLinks.map((item, index) => {
@@ -297,7 +290,6 @@ const Sidebar = () => {
           </div>
         </nav>
 
-        {/* MESSENGER BUTTON (Admin & HOD only) */}
         {isAdminOrHod && (
           <div className="px-3 py-2">
             <motion.button
@@ -312,7 +304,6 @@ const Sidebar = () => {
           </div>
         )}
 
-        {/* FOOTER */}
         <div className="p-4 border-t border-white/10 shrink-0 bg-slate-900/50 relative">
           <motion.div 
             animate={{ opacity: [0.5, 0.8, 0.5] }}
@@ -324,7 +315,6 @@ const Sidebar = () => {
         </div>
       </motion.div>
 
-      {/* MESSENGER MODAL - Mobile Responsive */}
       <AnimatePresence>
         {showMessenger && (
           <>
@@ -342,12 +332,10 @@ const Sidebar = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:left-0 lg:left-72 h-[85vh] sm:h-screen w-full sm:w-[400px] lg:w-[450px] z-[2001] flex flex-col bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 sm:border-l sm:border-white/10 shadow-2xl rounded-t-3xl sm:rounded-none"
             >
-              {/* Drag Handle - Mobile Only */}
               <div className="sm:hidden flex justify-center pt-3 pb-2 shrink-0">
                 <div className="w-10 h-1 bg-white/20 rounded-full"/>
               </div>
 
-              {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
                 <div className="flex items-center gap-3">
                   <motion.div 
@@ -370,7 +358,6 @@ const Sidebar = () => {
                 </button>
               </div>
 
-              {/* Messages List */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {loading ? (
                   <div className="flex items-center justify-center h-full">
@@ -422,7 +409,6 @@ const Sidebar = () => {
                 )}
               </div>
 
-              {/* Send Message Form */}
               <div className="p-4 border-t border-white/10 shrink-0">
                 <form onSubmit={handleSendBroadcast} className="flex gap-2">
                   <input

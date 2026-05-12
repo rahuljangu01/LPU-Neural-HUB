@@ -13,7 +13,7 @@ const timeSlots = [
   "09:00 - 10:00", 
   "10:00 - 11:00", 
   "11:00 - 12:00", 
-  "12:00 - 01:00",  // Lunch Break
+  "12:00 - 01:00",  // Lunch break slot -- no classes scheduled here
   "01:00 - 02:00", 
   "02:00 - 03:00", 
   "03:00 - 04:00", 
@@ -32,8 +32,11 @@ const StudentDashboard = () => {
 
   const userName = localStorage.getItem('userName') || 'Student';
   const userBatch = localStorage.getItem('userBatch') || 'D2421'; 
+  const userGroup = localStorage.getItem('userGroup') || 'N/A';
   const userElectiveBatch = localStorage.getItem('userElectiveBatch') || '';
   const userUid = localStorage.getItem('userUid') || '';
+  const userRollNo = localStorage.getItem('userRollNo') || '0';
+  console.log('👤 Student Info:', { batch: userBatch, group: userGroup, rollNo: userRollNo, uid: userUid });
   const currentDay = currentTime.toLocaleDateString('en-US', { weekday: 'long' });
 
   const getMinutes = (timeStr) => {
@@ -56,24 +59,25 @@ const StudentDashboard = () => {
       setLoading(true);
       const res = await API.get('/timetable');
       
-      // Combine regular + elective timetable into ONE
-      let combined = res.data.filter(t => t.batch === userBatch);
+      let combined = res.data.filter(t => {
+        const group = t.studentGroup || t.subGroup;
+        return t.batch === userBatch && (!group || group === '0' || group === userGroup);
+      });
       
       if (userElectiveBatch) {
         const electiveSchedule = res.data.filter(t => t.batch === userElectiveBatch);
-        // Mark elective classes
         const markedElective = electiveSchedule.map(e => ({ ...e, isElective: true }));
         combined = [...combined, ...markedElective];
       }
       
       setTimetable(combined);
-      setElectiveTimetable([]); // Not needed anymore - merged into main
+      setElectiveTimetable([]);
     } catch (err) { 
       errorAlert("Sync Fail", "Academic node unreachable.");
     } finally {
       setLoading(false);
     }
-  }, [userBatch, userElectiveBatch]);
+  }, [userBatch, userGroup, userElectiveBatch]);
 
   const { currentClass, upcomingClasses } = useMemo(() => {
     const today = timetable.filter(t => t.day === currentDay && !isLunchBreak(t.timeSlot));
@@ -170,7 +174,6 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 font-['Outfit']">
       
-      {/* FLOATING NOTIFICATION */}
       <AnimatePresence>
         {reminder && (
           <motion.div 
@@ -203,10 +206,8 @@ const StudentDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
         
-        {/* HEADER */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -232,8 +233,12 @@ const StudentDashboard = () => {
                 {userName.split(' ')[0]}
               </motion.span>
             </h1>
-            <div className="flex items-center gap-3 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-[10px] font-bold rounded-full uppercase">{userBatch}</span>
+              {userGroup !== 'N/A' && (
+                <span className="px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase">{userGroup}</span>
+              )}
+              <span className="text-[10px] text-slate-400 font-medium">Roll: {userRollNo}</span>
               <span className="text-[10px] text-slate-400 font-medium">Reg: {userUid}</span>
             </div>
           </div>
@@ -262,9 +267,7 @@ const StudentDashboard = () => {
           </div>
         </motion.div>
 
-        {/* STATUS CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* LIVE CLASS CARD */}
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -322,7 +325,6 @@ const StudentDashboard = () => {
             </div>
           </motion.div>
 
-          {/* UPCOMING CLASS CARD */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -353,7 +355,6 @@ const StudentDashboard = () => {
           </motion.div>
         </div>
 
-        {/* CONTENT HUB */}
         <AnimatePresence mode="wait">
           {activeTab === 'today' ? (
             <motion.div 
@@ -493,7 +494,6 @@ const StudentDashboard = () => {
                 </motion.button>
               </div>
               
-              {/* DESKTOP VIEW - Traditional Grid */}
               <div className="hidden md:block">
                 <ZoomableTimetable>
                   <div className="min-w-[900px]">
@@ -573,7 +573,6 @@ const StudentDashboard = () => {
                 </ZoomableTimetable>
               </div>
 
-              {/* MOBILE VIEW - Horizontal Day Scroll */}
               <div className="md:hidden">
                 <ZoomableTimetable>
                   <div className="flex gap-3 pb-4 overflow-x-auto snap-x snap-mandatory">
@@ -582,7 +581,6 @@ const StudentDashboard = () => {
                         key={day} 
                         className="flex-shrink-0 w-[140px] snap-center"
                       >
-                        {/* Day Header */}
                         <div className={`text-center py-2 mb-3 rounded-lg ${
                           day === currentDay ? 'bg-red-500/20 border border-red-500/50' : 'bg-slate-800/50'
                         }`}>
@@ -592,8 +590,6 @@ const StudentDashboard = () => {
                             {day.slice(0, 3)}
                           </h1>
                         </div>
-                        
-                        {/* Time Slots for this Day */}
                         <div className="space-y-2">
                           {timeSlots.map((slot, i) => {
                             const session = timetable.find(t => t.day === day && t.timeSlot === slot);
@@ -612,8 +608,7 @@ const StudentDashboard = () => {
                                     : 'bg-white/5 border-transparent'
                                 }`}
                               >
-                                {/* Time */}
-                                <p className="text-[8px] text-slate-500 font-bold mb-1">
+                          <p className="text-[8px] text-slate-500 font-bold mb-1">
                                   {slot.split(' - ')[0]}
                                 </p>
                                 
@@ -663,7 +658,6 @@ const StudentDashboard = () => {
                 <p className="text-[10px] text-slate-500 text-center mt-2">← Swipe to see more days →</p>
               </div>
 
-              {/* LEGEND */}
               {userElectiveBatch && (
                 <div className="flex items-center justify-center gap-4 mt-4 text-xs">
                   <div className="flex items-center gap-1">
@@ -680,7 +674,6 @@ const StudentDashboard = () => {
           )}
         </AnimatePresence>
 
-        {/* FOOTER */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -14,7 +14,7 @@ const timeSlots = [
   "09:00 - 10:00", 
   "10:00 - 11:00", 
   "11:00 - 12:00", 
-  "12:00 - 01:00",  // Lunch Break
+  "12:00 - 01:00",  // Lunch break slot -- no classes scheduled here
   "01:00 - 02:00", 
   "02:00 - 03:00", 
   "03:00 - 04:00", 
@@ -43,9 +43,9 @@ const TeacherDashboard = () => {
     if (!match) return 0;
     let h = parseInt(match[1]);
     let m = parseInt(match[2]);
-    // 12:00 PM is noon (no adjustment), 01:00-07:00 is morning so add 12 for PM
-    if (h === 12) h = 12; // 12:00 stays as 12 (noon)
-    else if (h >= 1 && h <= 7) h += 12; // 01:00-07:00 becomes 13:00-19:00 (PM)
+    // Times use 12-hour format: noon stays 12, 01-07 are PM hours so add 12
+    if (h === 12) h = 12;
+    else if (h >= 1 && h <= 7) h += 12;
     return h * 60 + m;
   };
 
@@ -64,7 +64,7 @@ const TeacherDashboard = () => {
       const myClasses = timeRes.data.filter(item => 
         item.facultyName === facultyName || item.faculty?.name === facultyName
       );
-      // Mark elective classes
+      // Tag classes belonging to elective batches
       const electiveBatchNames = (batchRes.data || []).filter(b => b.isElective).map(b => b.name);
       setElectiveBatches(electiveBatchNames);
       const markedClasses = myClasses.map(c => ({
@@ -168,7 +168,6 @@ const TeacherDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 font-['Outfit']">
       
-      {/* FLOATING REMINDER */}
       <AnimatePresence>
         {reminder && (
           <motion.div 
@@ -200,10 +199,8 @@ const TeacherDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
         
-        {/* HEADER */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -263,10 +260,8 @@ const TeacherDashboard = () => {
           </div>
         </motion.div>
 
-        {/* TAB CONTENT */}
         <AnimatePresence mode="wait">
           
-          {/* TODAY TAB */}
           {activeTab === 'today' && (
             <motion.div 
               key="today"
@@ -275,8 +270,7 @@ const TeacherDashboard = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              {/* STATS CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                     { label: 'Today', val: (stats.currentClass ? 1 : 0) + stats.upcomingClasses.length, icon: Activity, color: 'from-orange-500 to-red-500' },
                     { label: 'Weekly', val: `${timetable.length} Classes`, icon: Cpu, color: 'from-blue-500 to-cyan-500' },
@@ -300,8 +294,7 @@ const TeacherDashboard = () => {
                 ))}
               </div>
 
-              {/* LIVE CLASS CARD */}
-              <motion.div 
+            <motion.div 
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className={`relative overflow-hidden rounded-3xl p-6 md:p-8 transition-all ${
@@ -367,8 +360,7 @@ const TeacherDashboard = () => {
                 </div>
               </motion.div>
 
-              {/* UPCOMING CLASSES */}
-              {stats.upcomingClasses.length > 0 && (
+            {stats.upcomingClasses.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Upcoming Classes</h3>
                   {stats.upcomingClasses.map((cls, idx) => (
@@ -428,7 +420,6 @@ const TeacherDashboard = () => {
             </motion.div>
           )}
 
-          {/* WEEKLY MATRIX TAB */}
           {activeTab === 'matrix' && (
             <motion.div 
               key="matrix"
@@ -458,7 +449,6 @@ const TeacherDashboard = () => {
                 </motion.button>
               </div>
               
-              {/* DESKTOP VIEW */}
               <div className="hidden md:block">
                 <ZoomableTimetable>
                   <div className="min-w-[900px]">
@@ -538,7 +528,6 @@ const TeacherDashboard = () => {
                 </ZoomableTimetable>
               </div>
 
-              {/* MOBILE VIEW - Horizontal Day Scroll */}
               <div className="md:hidden">
                 <ZoomableTimetable>
                   <div className="flex gap-3 pb-4 overflow-x-auto snap-x snap-mandatory">
@@ -624,7 +613,6 @@ const TeacherDashboard = () => {
                 </ZoomableTimetable>
                 <p className="text-[10px] text-slate-500 text-center mt-2">← Swipe to see more days →</p>
                 
-                {/* LEGEND */}
                 <div className="flex items-center justify-center gap-4 mt-4 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-red-500/30 rounded"></div>
@@ -639,7 +627,6 @@ const TeacherDashboard = () => {
             </motion.div>
           )}
 
-          {/* STATS TAB */}
           {activeTab === 'stats' && (
             <motion.div 
               key="stats"
@@ -647,8 +634,7 @@ const TeacherDashboard = () => {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-6"
             >
-              {/* ANALYTICS CARD */}
-              <motion.div 
+            <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-slate-200/50 shadow-xl"
@@ -664,8 +650,7 @@ const TeacherDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* PROGRESS BAR */}
-                  <div className="space-y-4">
+              <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-bold text-slate-600">Work Efficiency</span>
                       <span className="text-lg font-black text-orange-500">{stats.conductanceRatio}%</span>
@@ -691,8 +676,7 @@ const TeacherDashboard = () => {
                     </div>
                   </div>
 
-                  {/* EXPERTISE */}
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                     <div className="flex items-center gap-2 mb-4">
                       <Globe size={16} className="text-blue-500"/>
                       <span className="text-sm font-bold text-slate-600">Subject Expertise</span>
@@ -715,8 +699,7 @@ const TeacherDashboard = () => {
                 </div>
               </motion.div>
 
-              {/* CLASS HISTORY */}
-              <motion.div 
+            <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -771,7 +754,6 @@ const TeacherDashboard = () => {
           )}
         </AnimatePresence>
 
-        {/* FOOTER */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

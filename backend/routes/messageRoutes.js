@@ -3,7 +3,6 @@ const router = express.Router();
 const Message = require('../models/Message');
 const auth = require('../middleware/authMiddleware');
 
-// 1. Get All Messages
 router.get('/', async (req, res) => {
     try {
         const messages = await Message.find().sort({ createdAt: -1 }).limit(10);
@@ -13,7 +12,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 2. Send Message (Broadcast)
 router.post('/', async (req, res) => {
     try {
         const { senderName, senderRole, content } = req.body;
@@ -25,7 +23,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// 3. Delete Message - Protected route (Admin, HOD, Faculty can delete)
+// Admin, HOD, and faculty can delete messages
 router.delete('/:id', auth, async (req, res) => {
     try {
         await Message.findByIdAndDelete(req.params.id);

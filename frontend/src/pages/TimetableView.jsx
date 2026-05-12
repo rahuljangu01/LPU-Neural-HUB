@@ -57,7 +57,6 @@ const TimetableView = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 font-['Outfit']">
 
-      {/* HEADER */}
       <div className="bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 px-4 sm:px-6 md:px-8 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -78,7 +77,6 @@ const TimetableView = () => {
               </div>
             </div>
 
-            {/* SEARCH BAR */}
             <div className="relative w-full lg:w-[400px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20}/>
               <input
@@ -93,7 +91,6 @@ const TimetableView = () => {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4">
@@ -138,10 +135,8 @@ const TimetableView = () => {
                       live ? 'border-orange-500 shadow-xl shadow-orange-500/20' : 'border-slate-200 hover:border-orange-300 hover:shadow-lg'
                     }`}
                   >
-                    {/* Top accent bar */}
                     <div className={`h-1 ${live ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-gradient-to-r from-slate-300 to-slate-400'}`}/>
 
-                    {/* LIVE Badge */}
                     {live && (
                       <div className="absolute top-3 right-3">
                         <motion.span
@@ -155,7 +150,6 @@ const TimetableView = () => {
                     )}
 
                     <div className="p-4 sm:p-5">
-                      {/* Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           live ? 'bg-gradient-to-br from-orange-500 to-red-500' : 'bg-slate-800'
@@ -169,12 +163,10 @@ const TimetableView = () => {
                         </span>
                       </div>
 
-                      {/* Subject */}
                       <h4 className="text-lg font-bold text-slate-800 mb-4 line-clamp-2">
                         {item.subject}
                       </h4>
 
-                      {/* Details */}
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center gap-3 text-slate-600">
                           <Clock size={16} className="text-orange-500"/>
@@ -186,7 +178,6 @@ const TimetableView = () => {
                         </div>
                       </div>
 
-                      {/* Footer */}
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2">
                           <div className={`w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center text-white font-bold text-xs`}>
@@ -209,7 +200,6 @@ const TimetableView = () => {
         )}
       </div>
 
-      {/* FOOTER */}
       <div className="px-4 sm:px-6 md:px-8 py-6 border-t border-slate-200">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-400 text-xs font-semibold">
           <p>Total Classes: {schedule.length}</p>

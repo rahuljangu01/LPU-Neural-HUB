@@ -124,7 +124,6 @@ const Navbar = () => {
     <>
       <nav className="h-14 sm:h-16 md:h-20 sticky top-0 z-[60] px-3 sm:px-4 md:px-8 flex items-center justify-between bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 backdrop-blur-xl border-b border-slate-700/50 shadow-lg font-['Outfit']">
         
-        {/* LEFT: IDENTITY SECTION */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 pl-10 sm:pl-0">
           <div className="w-1 h-6 sm:h-8 md:h-10 bg-gradient-to-b from-orange-500 via-red-500 to-rose-500 rounded-full shadow-lg shadow-red-500/30"/>
           
@@ -153,7 +152,6 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* CENTER: CLOCK NODE - Hidden on mobile */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -174,15 +172,12 @@ const Navbar = () => {
           </div>
         </motion.div>
 
-        {/* RIGHT: NOTIFICATIONS & PROFILE */}
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           
-          {/* Mobile Time */}
           <div className="flex xl:hidden flex-col items-end text-slate-400 min-w-0">
             <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase">{mobileTime}</span>
           </div>
 
-          {/* Bell Icon */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -204,7 +199,6 @@ const Navbar = () => {
             </AnimatePresence>
           </motion.button>
 
-          {/* Profile Avatar */}
           <div className="relative">
             <motion.button 
               whileHover={{ scale: 1.05 }}
@@ -225,7 +219,6 @@ const Navbar = () => {
               <ChevronDown size={12} className={`text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}/>
             </motion.button>
 
-            {/* Dropdown Menu */}
             <AnimatePresence>
               {isDropdownOpen && (
                 <>
@@ -282,7 +275,6 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* PROFILE MODAL */}
       <AnimatePresence>
         {isProfileOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -361,7 +353,6 @@ const Navbar = () => {
 
       <NotificationPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
 
-      {/* LOGOUT CONFIRMATION MODAL */}
       <AnimatePresence>
         {showLogoutModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[3000] flex items-center justify-center p-4">
@@ -397,7 +388,6 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* PASSWORD CHANGE MODAL */}
       <AnimatePresence>
         {showPasswordModal && (
           <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">

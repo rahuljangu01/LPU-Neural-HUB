@@ -1,4 +1,5 @@
 const Batch = require('../models/Batch');
+const User = require('../models/User');
 
 exports.getBatches = async (req, res) => {
     try {
@@ -14,6 +15,7 @@ exports.addBatch = async (req, res) => {
         const { name, studentCount, subjects, isElective } = req.body; 
         
         const existing = await Batch.findOne({ name: name.trim() });
+        // Reject the request if this batch name is already in use
         if (existing) return res.status(400).json({ msg: "This Batch ID already exists." });
 
         const newBatch = new Batch({
@@ -35,7 +37,18 @@ exports.deleteBatch = async (req, res) => {
     try {
         const deleted = await Batch.findByIdAndDelete(req.params.id);
         if (!deleted) return res.status(404).json({ msg: "Batch not found" });
-        res.json({ msg: "Batch purged successfully" });
+        
+        // Reset all students assigned to this batch and clear their elective enrollment too
+        await User.updateMany(
+            { batch: deleted.name },
+            { $set: { batch: '', rollNo: 0, group: 'N/A' } }
+        );
+        await User.updateMany(
+            { electiveBatch: deleted.name },
+            { $set: { electiveBatch: '' } }
+        );
+        
+        res.json({ msg: "Batch purged successfully, students reset" });
     } catch (err) {
         res.status(500).json({ msg: "Delete Failed" });
     }
@@ -46,6 +59,7 @@ exports.updateBatch = async (req, res) => {
             req.params.id,
             { $set: req.body },
             { new: true }
+        // Pull in full subject details so the response is ready for the frontend
         ).populate('subjects');
 
         if (!updatedBatch) {

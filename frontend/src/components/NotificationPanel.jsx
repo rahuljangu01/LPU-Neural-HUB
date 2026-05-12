@@ -74,7 +74,6 @@ const NotificationPanel = ({ isOpen, onClose }) => {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 h-screen w-full sm:w-[450px] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 z-[101] shadow-2xl flex flex-col"
           >
-            {/* Header */}
             <div className="p-4 sm:p-6 border-b border-white/10 shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -94,7 +93,6 @@ const NotificationPanel = ({ isOpen, onClose }) => {
                 </button>
               </div>
 
-              {/* Send Message Form (Admin & HOD only) */}
               {isAdminOrHod && (
                 <form onSubmit={sendMsg} className="flex gap-2">
                   <div className="flex-1 relative">
@@ -122,7 +120,6 @@ const NotificationPanel = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {/* Messages List */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">

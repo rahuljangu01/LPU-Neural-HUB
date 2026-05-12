@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import API from '../services/api';
 import { successToast, errorAlert, confirmDialog } from '../services/alertService';
 
+// Admin control panel — manages users, rooms, subjects, batches, and broadcasts
 const AdminDashboard = memo(() => {
   const location = useLocation();
   const path = location.pathname;
@@ -42,6 +43,7 @@ const AdminDashboard = memo(() => {
   const [batchList, setBatchList] = useState([]);
   const [messages, setMessages] = useState([]);
 
+  // Pull all data from the server in parallel to populate the dashboard
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,7 +55,7 @@ const AdminDashboard = memo(() => {
         API.get('/messages').catch(() => ({data:[]}))
       ]);
 
-      const teachers = u.data.filter(user => user.role?.toLowerCase() !== 'student' && user.role?.toLowerCase() !== 'admin');
+      const teachers = u.data.filter(user => user.role?.toLowerCase() !== 'student' && user.role?.toLowerCase() !== 'admin' && user.role?.toLowerCase() !== 'hod');
       const students = u.data.filter(user => user.role?.toLowerCase() === 'student');
 
       setAllUsers(u.data);
@@ -149,14 +151,11 @@ const AdminDashboard = memo(() => {
   };
 
   const assignStudentToBatch = async (userId, batchName, group = null, electiveBatchName = null) => {
-    console.log('assignStudentToBatch called:', { userId, batchName, group, electiveBatchName });
-    console.log('electiveBatchName type:', typeof electiveBatchName, 'value:', electiveBatchName, 'truthy:', !!electiveBatchName);
-    
     if (batchName === '' && !electiveBatchName) {
-        console.log('Entering REMOVE branch');
         try {
             await API.post(`/auth/update-expertise`, { userId, batch: '', electiveBatch: '' });
             successToast("Removed from batch");
+            setViewingUser(null);
             fetchData();
             return;
         } catch (err) { errorAlert("Error", "Failed to remove."); return; }
@@ -164,24 +163,18 @@ const AdminDashboard = memo(() => {
 
     const student = studentList.find(s => s._id === userId);
     
-    console.log('student found:', student ? student.name : 'not found');
-    console.log('Checking if electiveBatchName is truthy:', !!electiveBatchName, electiveBatchName);
-    
     if (electiveBatchName) {
-        console.log('Adding to elective branch:', { userId, electiveBatch: electiveBatchName });
         try {
             await API.post(`/auth/update-expertise`, { userId, electiveBatch: electiveBatchName });
             successToast("Added to elective batch");
             fetchData();
             return;
         } catch (err) { 
-            console.error('Elective error:', err);
             errorAlert("Error", "Failed to add student to elective."); 
             return;
         }
     }
 
-    // Regular batch logic
     if (student.batch && student.batch !== '' && student.batch !== batchName) {
         errorAlert("Error", `Already in batch: ${student.batch}.`);
         return;
@@ -239,14 +232,12 @@ const AdminDashboard = memo(() => {
       
       const { imported, skipped, users } = res.data;
       
-      // Build detailed message
       let msg = `Imported: ${imported} users`;
       if (skipped > 0) {
         msg += ` | Skipped: ${skipped}`;
       }
       successToast(msg);
       
-      // Log imported users with UIDs to console
       if (users && users.length > 0) {
         console.log("📋 Imported Users:");
         users.forEach(u => {
@@ -336,7 +327,7 @@ const AdminDashboard = memo(() => {
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8 space-y-6 sm:space-y-8 font-['Outfit'] min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100">
 
-      {/* STATS CARDS - GPU OPTIMIZED */}
+      {/* Top-level stats cards showing counts for each resource type */}
       {path === '/admin' && (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
           {[
@@ -369,7 +360,6 @@ const AdminDashboard = memo(() => {
 
       <AnimatePresence mode="wait">
         
-        {/* MAIN DASHBOARD */}
         {path === '/admin' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -378,7 +368,6 @@ const AdminDashboard = memo(() => {
             transition={{ duration: 0.3 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8"
           >
-            {/* TEACHER MATRIX - GPU OPTIMIZED */}
             <motion.div 
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -405,10 +394,10 @@ const AdminDashboard = memo(() => {
                 </button>
               </div>
 
+              {/* Teacher Matrix — searchable list of faculty members to edit their workload and subjects */}
               <AnimatePresence mode="wait">
                 {!selectedTeacher ? (
                   <div key="teacher-list" className="space-y-3 sm:space-y-4">
-                    {/* Search Bar */}
                     <div className="relative">
                       <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 sm:h-5"/>
                       <input 
@@ -419,7 +408,6 @@ const AdminDashboard = memo(() => {
                       />
                     </div>
                     
-                    {/* Teacher List */}
                     <div className="space-y-2 max-h-[200px] sm:max-h-[250px] md:max-h-[300px] overflow-y-auto pr-1">
                       {filteredTeachers.map((t) => (
                         <div 
@@ -467,7 +455,6 @@ const AdminDashboard = memo(() => {
                       </button>
                     </div>
 
-                    {/* Workload Inputs */}
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <div className="space-y-1.5 sm:space-y-2">
                         <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">Max Classes/Week</label>
@@ -489,7 +476,6 @@ const AdminDashboard = memo(() => {
                       </div>
                     </div>
 
-                    {/* ASSIGNED SUBJECTS DISPLAY */}
                     {selectedTeacher.expertise && selectedTeacher.expertise.length > 0 && (
                       <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 border-green-200">
                         <label className="text-xs sm:text-sm font-bold text-green-600 uppercase tracking-wider flex items-center gap-2 mb-3">
@@ -522,7 +508,7 @@ const AdminDashboard = memo(() => {
                         </div>
                       )}
 
-                    {/* Subject Selection */}
+                    {/* Check/uncheck subjects to assign or remove from this faculty member */}
                     <div className="space-y-2 sm:space-y-3">
                       <label className="text-[10px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
                         {selectedTeacher.expertise?.length > 0 ? 'Add/Remove Subjects' : 'Select Subjects'}
@@ -577,7 +563,6 @@ const AdminDashboard = memo(() => {
               </AnimatePresence>
             </motion.div>
 
-            {/* STATUS CARD - GPU OPTIMIZED */}
             <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 p-6 sm:p-8 md:p-10 lg:p-12 rounded-2xl sm:rounded-3xl shadow-xl text-white relative overflow-hidden">
               <div className="absolute -top-20 -right-20 w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 bg-gradient-to-bl from-orange-500/20 to-transparent rounded-full"/>
 
@@ -602,7 +587,6 @@ const AdminDashboard = memo(() => {
           </motion.div>
         )}
 
-        {/* PERSONNEL REGISTRY - FULLY RESPONSIVE */}
         {path === '/admin/users' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -788,14 +772,12 @@ const AdminDashboard = memo(() => {
           </motion.div>
         )}
 
-        {/* SUBJECTS - FULLY RESPONSIVE */}
         {path === '/admin/subjects' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
           >
-            {/* FORM */}
             <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5 md:mb-6">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -860,7 +842,6 @@ const AdminDashboard = memo(() => {
               </form>
             </div>
 
-            {/* LIST */}
             <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
               <div className="flex justify-between items-center mb-4 sm:mb-5 md:mb-6">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -916,7 +897,6 @@ const AdminDashboard = memo(() => {
           </motion.div>
         )}
 
-        {/* BATCHES - FULLY RESPONSIVE */}
         {path === '/admin/batches' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -924,7 +904,6 @@ const AdminDashboard = memo(() => {
             className="space-y-4 sm:space-y-6"
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              {/* FORM */}
               <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5 md:mb-6">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -976,7 +955,6 @@ const AdminDashboard = memo(() => {
                 </form>
               </div>
 
-              {/* BATCH LIST */}
               <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
                 <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5 md:mb-6">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -1003,7 +981,11 @@ const AdminDashboard = memo(() => {
                       )}
                       <GraduationCap className={`w-5 h-5 sm:w-6 sm:h-6 mb-2 ${b.isElective ? 'text-amber-500' : 'text-purple-500'}`}/>
                       <h4 className="font-bold text-slate-800 text-sm sm:text-base">{b.name}</h4>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{b.studentCount} Students</p>
+                      <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                        {b.isElective
+                          ? allUsers.filter(u => u.electiveBatch === b.name).length
+                          : allUsers.filter(u => u.batch === b.name).length} Students
+                      </p>
                       
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDelete('batch', b._id) }}
@@ -1024,7 +1006,6 @@ const AdminDashboard = memo(() => {
               </div>
             </div>
 
-            {/* BATCH DETAILS */}
             <AnimatePresence>
               {viewBatchDetails && (
                 <motion.div 
@@ -1043,14 +1024,20 @@ const AdminDashboard = memo(() => {
                           <h2 className="text-lg sm:text-xl font-bold text-slate-800">Batch: {viewBatchDetails.name}</h2>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs sm:text-sm font-medium text-slate-500">
-                              Total: {allUsers.filter(u => u.batch === viewBatchDetails.name).length} Students
+                              Total: {viewBatchDetails.isElective
+                                ? allUsers.filter(u => u.electiveBatch === viewBatchDetails.name).length
+                                : allUsers.filter(u => u.batch === viewBatchDetails.name).length} Students
                             </span>
-                            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-semibold">
-                              G1: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G1').length}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full font-semibold">
-                              G2: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G2').length}
-                            </span>
+                            {!viewBatchDetails.isElective && (
+                              <>
+                                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-semibold">
+                                  G1: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G1').length}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full font-semibold">
+                                  G2: {allUsers.filter(u => u.batch === viewBatchDetails.name && u.group === 'G2').length}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1064,7 +1051,6 @@ const AdminDashboard = memo(() => {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-5 md:p-6">
-                    {/* STUDENTS */}
                     <div>
                       <div className="flex items-center gap-2 mb-3 sm:mb-4">
                         <UserPlus2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500"/>
@@ -1131,7 +1117,6 @@ const AdminDashboard = memo(() => {
                                 </button>
                               )
                             ) : (
-                              // Regular batch logic
                               s.batch === viewBatchDetails.name ? (
                                 <div className="flex gap-1">
                                   <button 
@@ -1169,7 +1154,6 @@ const AdminDashboard = memo(() => {
                       </div>
                     </div>
 
-                    {/* SUBJECTS */}
                     <div>
                       <div className="flex items-center gap-2 mb-3 sm:mb-4">
                         <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500"/>
@@ -1216,14 +1200,12 @@ const AdminDashboard = memo(() => {
           </motion.div>
         )}
 
-        {/* ROOMS - FULLY RESPONSIVE */}
         {path === '/admin/rooms' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
           >
-            {/* FORM */}
             <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5 md:mb-6">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -1271,7 +1253,6 @@ const AdminDashboard = memo(() => {
               </form>
             </div>
 
-            {/* LIST */}
             <div className="bg-white p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200">
               <div className="flex justify-between items-center mb-4 sm:mb-5 md:mb-6">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -1325,14 +1306,12 @@ const AdminDashboard = memo(() => {
           </motion.div>
         )}
 
-        {/* BROADCAST - FULLY RESPONSIVE */}
         {path === '/admin/broadcast' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
           >
-            {/* INPUT */}
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-xl text-white relative overflow-hidden">
               <div className="absolute -top-16 -left-16 w-40 sm:w-52 md:w-60 h-40 sm:h-52 md:h-60 bg-orange-500/10 rounded-full"/>
               
@@ -1361,7 +1340,6 @@ const AdminDashboard = memo(() => {
               </button>
             </div>
 
-            {/* MESSAGES */}
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50">
                 <div className="flex justify-between items-center">
@@ -1419,7 +1397,6 @@ const AdminDashboard = memo(() => {
         )}
       </AnimatePresence>
 
-      {/* USER DETAILS MODAL - ANIMATED & STYLED */}
       {viewingUser && createPortal(
         <motion.div 
           initial={{ opacity: 0 }} 
@@ -1427,7 +1404,6 @@ const AdminDashboard = memo(() => {
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
         >
-          {/* Animated Background */}
           <motion.div 
             className="absolute inset-0 bg-black/80 backdrop-blur-md" 
             onClick={() => setViewingUser(null)}
@@ -1435,7 +1411,6 @@ const AdminDashboard = memo(() => {
             animate={{ opacity: 1 }}
           />
           
-          {/* Floating Particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(6)].map((_, i) => (
               <motion.div
@@ -1465,17 +1440,14 @@ const AdminDashboard = memo(() => {
             transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
             className="relative w-full max-w-sm sm:max-w-md"
           >
-            {/* Glow Effect */}
             <div className={`absolute -inset-1 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500 rounded-3xl blur-xl opacity-50 ${
               viewingUser.role === 'student' ? 'from-cyan-500 via-teal-500 to-emerald-500' : ''
             }`}/>
             
-            {/* Main Card */}
             <div className={`relative bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-3xl overflow-hidden shadow-2xl border border-white/10 ${
               viewingUser.role === 'student' ? 'from-cyan-900/30 via-slate-900 to-teal-900/30' : ''
             }`}>
               
-              {/* Animated Top Border */}
               <motion.div 
                 className={`h-1.5 bg-gradient-to-r from-orange-500 via-red-500 to-rose-500 ${
                   viewingUser.role === 'student' ? 'from-cyan-500 via-teal-500 to-emerald-500' : ''
@@ -1485,14 +1457,11 @@ const AdminDashboard = memo(() => {
                 transition={{ delay: 0.3, duration: 0.8 }}
               />
 
-              {/* Decorative Circles */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-orange-500/10 to-transparent rounded-full blur-3xl"/>
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-red-500/10 to-transparent rounded-full blur-3xl"/>
               
               <div className="relative p-6 sm:p-8">
-                {/* Top Buttons Row */}
                 <div className="absolute top-4 right-4 flex gap-2 z-10">
-                  {/* Delete Button - Only for non-admin users */}
                   {viewingUser.role !== 'admin' && (
                     <motion.button 
                       whileHover={{ scale: 1.1 }}
@@ -1510,7 +1479,6 @@ const AdminDashboard = memo(() => {
                     </motion.button>
                   )}
                   
-                  {/* Close Button */}
                   <motion.button 
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
@@ -1525,7 +1493,6 @@ const AdminDashboard = memo(() => {
 
                 <div className="flex flex-col items-center text-center">
                   
-                  {/* Avatar with Glow */}
                   <motion.div 
                     className="relative mb-5"
                     initial={{ scale: 0, rotate: -180 }}
@@ -1547,14 +1514,12 @@ const AdminDashboard = memo(() => {
                         : 'bg-gradient-to-br from-orange-500 to-red-500'
                       }`}>
                       {(viewingUser.name || 'U').charAt(0).toUpperCase()}
-                      {/* Pulse Ring */}
                       <motion.div 
                         className="absolute inset-0 rounded-2xl border-2 border-white/30"
                         animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity }}
                       />
                     </div>
-                    {/* Status Badge */}
                     <motion.div 
                       className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg border-4 border-slate-800"
                       initial={{ scale: 0 }}
@@ -1565,7 +1530,6 @@ const AdminDashboard = memo(() => {
                     </motion.div>
                   </motion.div>
 
-                  {/* Name & Role */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1598,14 +1562,12 @@ const AdminDashboard = memo(() => {
                     </motion.div>
                   </motion.div>
 
-                  {/* Info Cards */}
                   <motion.div 
                     className="w-full space-y-3 mt-6"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                   >
-                    {/* Email */}
                     <motion.div 
                       className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all group"
                       whileHover={{ scale: 1.02, borderColor: "rgba(249,115,22,0.5)" }}
@@ -1619,7 +1581,6 @@ const AdminDashboard = memo(() => {
                       </div>
                     </motion.div>
 
-                    {/* Department */}
                     <motion.div 
                       className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all group"
                       whileHover={{ scale: 1.02, borderColor: "rgba(168,85,247,0.5)" }}
@@ -1633,7 +1594,6 @@ const AdminDashboard = memo(() => {
                       </div>
                     </motion.div>
 
-                    {/* ASSIGNED SUBJECTS - Animated for Faculty/HOD */}
                     {(viewingUser.role === 'faculty' || viewingUser.role === 'hod') && viewingUser.expertise && viewingUser.expertise.length > 0 && (
                       <motion.div 
                         className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl border border-green-500/30 backdrop-blur-sm"
@@ -1674,7 +1634,6 @@ const AdminDashboard = memo(() => {
                       </motion.div>
                     )}
 
-                    {/* No Subjects Message */}
                     {(viewingUser.role === 'faculty' || viewingUser.role === 'hod') && (!viewingUser.expertise || viewingUser.expertise.length === 0) && (
                       <motion.div 
                         className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center"
@@ -1687,7 +1646,6 @@ const AdminDashboard = memo(() => {
                       </motion.div>
                     )}
 
-                    {/* Student Info */}
                     {viewingUser.role === 'student' && (
                       <motion.div 
                         className="space-y-3"
@@ -1695,7 +1653,6 @@ const AdminDashboard = memo(() => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
                       >
-                        {/* Batch Display */}
                         <div className="flex gap-2 flex-wrap">
                           {viewingUser.batch && (
                             <div className="flex-1 min-w-[120px] p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/30 text-center">
@@ -1710,7 +1667,6 @@ const AdminDashboard = memo(() => {
                             </div>
                           )}
                         </div>
-                        {/* Roll No & Group */}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-center backdrop-blur-sm">
                             <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">Roll No</p>
@@ -1724,7 +1680,6 @@ const AdminDashboard = memo(() => {
                       </motion.div>
                     )}
 
-                    {/* HOD Verification */}
                     {viewingUser.role === 'hod' && (
                       <motion.div 
                         className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm"
@@ -1763,7 +1718,6 @@ const AdminDashboard = memo(() => {
                     )}
                   </motion.div>
 
-                  {/* Footer Badge */}
                   <motion.div 
                     className="mt-6 pt-4 border-t border-white/10 flex items-center justify-center gap-2"
                     initial={{ opacity: 0 }}
@@ -1779,7 +1733,7 @@ const AdminDashboard = memo(() => {
                     <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Identity Verified</span>
                   </motion.div>
                 </div>
-              </div>  
+              </div>
             </div>
           </motion.div>
         </motion.div>,

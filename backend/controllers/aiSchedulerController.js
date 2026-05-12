@@ -3,12 +3,14 @@ const User = require('../models/User');
 const Batch = require('../models/Batch');
 const Timetable = require('../models/Timetable');
 
+// Strips subgroup suffix (G1/G2) from a batch name to find its parent
 const getParentBatchName = (batchName) => {
     if (!batchName) return '';
     const match = batchName.match(/^(.+?)\s*[GG]1\s*$/i) || batchName.match(/^(.+?)[GG]1$/i);
     return match ? match[1].trim() : batchName.trim();
 };
 
+// Returns G1, G2, or null based on the batch name suffix
 const getSubGroup = (batchName) => {
     if (!batchName) return null;
     if (/G1$/i.test(batchName)) return 'G1';
@@ -19,7 +21,7 @@ const getSubGroup = (batchName) => {
 exports.generateAITimetable = async (req, res) => {
     try {
         const { maxLoad, batchId, fixedSlots } = req.body; 
-        
+        // Build a complete timetable — match every subject to a room, teacher, and free slot
         const rooms = await Room.find();
         const allFaculties = await User.find({ 
             role: { $in: ['faculty', 'hod'] },
@@ -36,39 +38,27 @@ exports.generateAITimetable = async (req, res) => {
         const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const timeSlots = ["09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "01:00 - 02:00", "02:00 - 03:00", "03:00 - 04:00"];
 
-        // ==========================================
-        // FIND BLOCKED SLOTS FOR ELECTIVE BATCHES
-        // Students in elective batch also have regular batch - avoid those slots
-        // ==========================================
+        // Block slots where elective students already have regular classes
         let blockedSlots = new Set();
         
         for (const b of batches) {
             if (b.isElective) {
-                // Find all students in this elective batch
                 const electiveStudents = await User.find({ 
                     electiveBatch: b.name, 
                     role: 'student' 
                 });
                 
-                // Get unique regular batch names from these students
                 const regularBatchNames = [...new Set(
                     electiveStudents
                         .map(s => s.batch)
                         .filter(batch => batch && batch !== '')
                 )];
                 
-                console.log(`\n📚 Elective Batch "${b.name}" students:`, electiveStudents.length);
-                console.log(`   Regular batches of these students:`, regularBatchNames);
-                
-                // Fetch existing timetable for those regular batches
                 if (regularBatchNames.length > 0) {
                     const existingTimetable = await Timetable.find({ 
                         batch: { $in: regularBatchNames } 
                     });
                     
-                    console.log(`   Blocked slots from regular batches:`, existingTimetable.length);
-                    
-                    // Add each slot to blocked set
                     for (const entry of existingTimetable) {
                         blockedSlots.add(`${entry.day}|${entry.timeSlot}`);
                     }
@@ -80,15 +70,12 @@ exports.generateAITimetable = async (req, res) => {
             const [day, timeSlot] = s.split('|');
             return { day, timeSlot };
         });
-        console.log(`\n🚫 Total Blocked Slots:`, blockedSlotsArray.length, blockedSlotsArray);
 
-        // Calculate total required
         let totalRequired = 0;
         const masterTaskList = [];
         
-        // Process each batch
         for (const b of batches) {
-            // Check if batch has G1 or G2 students
+            // Count G1 and G2 students to decide if this batch needs split scheduling
             const g1Students = await User.countDocuments({ batch: b.name, role: 'student', group: 'G1' });
             const g2Students = await User.countDocuments({ batch: b.name, role: 'student', group: 'G2' });
             const hasG1Students = g1Students > 0;
@@ -97,15 +84,15 @@ exports.generateAITimetable = async (req, res) => {
             
             const subjects = b.subjects || [];
             for (const sub of subjects) {
-                // Skip if subject is not properly loaded
+                // Guard against corrupted subject entries
                 if (!sub || !sub.name) continue;
                 
-                // Check if it's a lab subject
+                // Mark lab subjects early — they need dedicated room types
                 const typeLower = (sub.type || '').toLowerCase();
                 const isLab = typeLower.includes('lab') || typeLower.includes('practical');
                 
+                // Each subgroup gets its own lab time so both groups get hands-on practice
                 if (hasSplitStudents && isLab) {
-                    // SPLIT BATCH + LAB = Create G1 and G2 entries for PRACTICAL subjects ONLY
                     if (hasG1Students) {
                         totalRequired += sub.weeklyHours;
                         masterTaskList.push({ 
@@ -137,7 +124,6 @@ exports.generateAITimetable = async (req, res) => {
                         });
                     }
                 } else {
-                    // LECTURE or No Split = Full batch (StudentGroup = 0)
                     totalRequired += sub.weeklyHours;
                     masterTaskList.push({ 
                         batchName: b.name, 
@@ -154,110 +140,98 @@ exports.generateAITimetable = async (req, res) => {
                 }
             }
         }
-        
-        console.log('📋 Master Task List:', masterTaskList.map(t => ({
-            subject: t.subjectName,
-            type: t.subjectType,
-            hours: t.remainingHours,
-            group: t.subGroup
-        })));
 
-        // ==========================================
-        // STEP 1: Generate BASE schedule - PLACE ALL CLASSES
-        // ==========================================
         let baseSchedule = [];
         let baseAssigned = 0;
         const allTasks = JSON.parse(JSON.stringify(masterTaskList));
         
-        // Helper: Find available slot
-        const findSlot = (task, schedule) => {
+        const findSlot = (task, schedule, usedFacultyForSubject = {}) => {
+            const subKey = `${task.batchName}|${task.subjectName}`;
+            const usedForSub = usedFacultyForSubject[subKey] || [];
+            
             for (let d = 0; d < days.length; d++) {
+                const day = days[d];
+                
+                const sameDayCount = schedule.filter(s => 
+                    s.day === day && s.batch === task.batchName && s.subject === task.subjectName
+                ).length;
+                if (sameDayCount >= 2) continue;
+                
                 for (let s = 0; s < timeSlots.length; s++) {
-                    const day = days[d];
                     const slot = timeSlots[s];
                     
-                    // 🚫 CHECK 1: Blocked slots (elective batch conflicts)
                     const isBlocked = blockedSlots.has(`${day}|${slot}`);
                     if (isBlocked) {
-                        console.log(`   🚫 ${day} ${slot} - BLOCKED (elective student has class in regular batch)`);
                         continue;
                     }
                     
-                    // 🚫 CHECK 2: Batch conflict (same batch, same slot)
                     const batchConflict = schedule.some(s => 
                         s.day === day && s.timeSlot === slot && s.batch === task.batchName
                     );
                     if (batchConflict) {
-                        console.log(`   🚫 ${day} ${slot} - BATCH CLASH (${task.batchName} already has class)`);
                         continue;
                     }
                     
-                    // 🚫 CHECK 3: Teacher/Faculty conflict
-                    const teacherBusy = schedule.some(s => 
-                        s.day === day && s.timeSlot === slot && s.facultyName
-                    );
-                    if (teacherBusy) {
-                        console.log(`   🚫 ${day} ${slot} - TEACHER CLASH`);
-                        continue;
-                    }
-                    
-                    // Find faculty
-                    const faculty = allFaculties.find(f => {
+                    let faculty = allFaculties.find(f => {
                         const hasExp = f.expertise && f.expertise.some(e => 
                             e.trim().toLowerCase() === task.subjectName.trim().toLowerCase()
                         );
-                        // Teacher must be free AND not already assigned to this subject at this slot
                         const isFree = !schedule.some(s => 
                             s.day === day && s.timeSlot === slot && 
                             (s.facultyName === f.name || s.subject === task.subjectName)
                         );
-                        return hasExp && isFree;
+                        return hasExp && isFree && !usedForSub.includes(f.name);
                     });
                     if (!faculty) {
-                        console.log(`   🚫 ${day} ${slot} - NO AVAILABLE TEACHER for ${task.subjectName}`);
+                        faculty = allFaculties.find(f => {
+                            const hasExp = f.expertise && f.expertise.some(e => 
+                                e.trim().toLowerCase() === task.subjectName.trim().toLowerCase()
+                            );
+                            const isFree = !schedule.some(s => 
+                                s.day === day && s.timeSlot === slot && 
+                                (s.facultyName === f.name || s.subject === task.subjectName)
+                            );
+                            return hasExp && isFree;
+                        });
+                    }
+                    if (!faculty) {
                         continue;
                     }
                     
-                    // 🚫 CHECK 4: Room conflict
                     const room = rooms.find(r => {
-                        // Room must be free at this slot
                         const isFree = !schedule.some(s => 
                             s.day === day && s.timeSlot === slot && s.room === r.roomNumber
                         );
-                        // Lab subjects MUST go to Lab rooms
                         if (task.isLab) {
                             const roomType = (r.type || '').toLowerCase();
                             return isFree && r.capacity >= task.studentCount && 
                                    (roomType.includes('lab') || roomType.includes('practical'));
                         }
-                        // Theory subjects go to Theory rooms
                         return isFree && r.capacity >= task.studentCount;
                     });
                     if (!room) {
-                        console.log(`   🚫 ${day} ${slot} - NO AVAILABLE ROOM`);
                         continue;
                     }
                     
-                    // ✅ Slot found!
-                    console.log(`   ✅ ${day} ${slot} - ${task.subjectName} → Teacher: ${faculty.name}, Room: ${room.roomNumber}`);
                     return { day, slot, faculty, room };
                 }
             }
-            console.log(`   ❌ NO SLOT FOUND for ${task.subjectName}`);
             return null;
         };
         
-        // Place all classes
-        console.log('\n📅 PLACING CLASSES:');
+        const usedFacultyForSubject = {};
+        
         for (let task of allTasks) {
-            console.log(`\n🎯 Task: ${task.subjectName} (${task.subjectType}) - ${task.batchName} ${task.subGroup !== '0' ? `[${task.subGroup}]` : ''}`);
             let placed = 0;
             while (placed < task.remainingHours) {
-                const found = findSlot(task, baseSchedule);
+                const found = findSlot(task, baseSchedule, usedFacultyForSubject);
                 if (!found) {
-                    console.log(`   ❌ FAILED - Could not place ${task.subjectName}`);
                     break;
                 }
+                
+                const subKey = `${task.batchName}|${task.subjectName}`;
+                if (!usedFacultyForSubject[subKey]) usedFacultyForSubject[subKey] = [];
+                usedFacultyForSubject[subKey].push(found.faculty.name);
                 
                 baseSchedule.push({
                     day: found.day, 
@@ -277,41 +251,68 @@ exports.generateAITimetable = async (req, res) => {
             }
         }
 
-        // ==========================================
-        // STEP 2: Create 3 variants from SAME base schedule
-        // ==========================================
         const variants = [];
         const finalCount = baseSchedule.length;
         
+        const variantConfigs = [
+            { id: 1, label: 'Day-wise', sortKey: 'day' },
+            { id: 2, label: 'Subject-wise', sortKey: 'subject' },
+            { id: 3, label: 'Room-wise', sortKey: 'room' }
+        ];
+        
         for (let v = 1; v <= 3; v++) {
-            let scheduleCopy = [...baseSchedule];
+            let variantSchedule = [];
+            const tasksCopy = JSON.parse(JSON.stringify(masterTaskList));
+            const variantUsedFaculty = {};
             
-            // Different display order for each variant
             if (v === 1) {
-                scheduleCopy.sort((a, b) => {
-                    const dayDiff = days.indexOf(a.day) - days.indexOf(b.day);
-                    if (dayDiff !== 0) return dayDiff;
-                    return timeSlots.indexOf(a.timeSlot) - timeSlots.indexOf(b.timeSlot);
-                });
             } else if (v === 2) {
-                scheduleCopy.sort((a, b) => a.subject.localeCompare(b.subject));
+                tasksCopy.reverse();
             } else {
-                scheduleCopy.sort((a, b) => a.room.localeCompare(b.room) || days.indexOf(a.day) - days.indexOf(b.day));
+                tasksCopy.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
             }
+            
+            for (let task of tasksCopy) {
+                let placed = 0;
+                while (placed < task.remainingHours) {
+                    const found = findSlot(task, variantSchedule, variantUsedFaculty);
+                    if (!found) break;
+                    
+                    const subKey = `${task.batchName}|${task.subjectName}`;
+                    if (!variantUsedFaculty[subKey]) variantUsedFaculty[subKey] = [];
+                    variantUsedFaculty[subKey].push(found.faculty.name);
+                    
+                    variantSchedule.push({
+                        day: found.day, 
+                        timeSlot: found.slot, 
+                        subject: task.subjectName, 
+                        subjectCode: task.subjectCode,
+                        type: task.subjectType, 
+                        facultyName: found.faculty.name, 
+                        facultyUid: found.faculty.uid,
+                        room: found.room.roomNumber, 
+                        batch: task.batchName,
+                        subGroup: task.subGroup, 
+                        department: task.dept
+                    });
+                    placed++;
+                }
+            }
+            
+            variantSchedule.sort((a, b) => {
+                const dayDiff = days.indexOf(a.day) - days.indexOf(b.day);
+                if (dayDiff !== 0) return dayDiff;
+                return timeSlots.indexOf(a.timeSlot) - timeSlots.indexOf(b.timeSlot);
+            });
             
             variants.push({
                 variantId: v,
-                utilizationScore: '100%',
-                schedule: scheduleCopy,
-                totalClasses: baseSchedule.length
+                label: variantConfigs[v-1].label,
+                utilizationScore: `100%`,
+                schedule: variantSchedule,
+                totalClasses: variantSchedule.length
             });
         }
-
-        console.log('📊 Timetable Generated:', {
-            required: totalRequired,
-            placed: baseSchedule.length,
-            message: baseSchedule.length === totalRequired ? '✅ Perfect!' : `⚠️ ${totalRequired - baseSchedule.length} classes not placed`
-        });
 
         res.json({ success: true, variants });
     } catch (err) {

@@ -10,10 +10,7 @@ root.render(
   </React.StrictMode>
 );
 
-/**
- * 📲 PWA SERVICE WORKER REGISTRATION
- * Iske bina mobile download/install ka option nahi aayega.
- */
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')

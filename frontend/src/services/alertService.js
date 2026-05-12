@@ -1,6 +1,5 @@
 import Swal from 'sweetalert2';
 
-// 1. SUCCESS TOAST - Simple & Clean
 export const successToast = (msg) => {
   Swal.fire({
     toast: true,
@@ -24,7 +23,6 @@ export const successToast = (msg) => {
   });
 };
 
-// 2. ERROR ALERT - Clean Popup
 export const errorAlert = (title, msg) => {
   Swal.fire({
     icon: 'error',
@@ -48,7 +46,6 @@ export const errorAlert = (title, msg) => {
   });
 };
 
-// 3. CONFIRM DIALOG - Clean & Simple
 export const confirmDialog = async (title, text) => {
   const result = await Swal.fire({
     icon: 'question',
@@ -78,7 +75,6 @@ export const confirmDialog = async (title, text) => {
   return result.isConfirmed;
 };
 
-// 4. INFO TOAST
 export const infoToast = (msg) => {
   Swal.fire({
     toast: true,
@@ -103,7 +99,6 @@ export const infoToast = (msg) => {
   });
 };
 
-// 5. WELCOME TOAST - Simple for All Users
 export const welcomeToast = (name) => {
   Swal.fire({
     toast: true,
@@ -128,7 +123,6 @@ export const welcomeToast = (name) => {
   });
 };
 
-// 6. WARNING TOAST
 export const warningToast = (msg) => {
   Swal.fire({
     toast: true,

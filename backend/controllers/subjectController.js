@@ -1,40 +1,66 @@
 const Subject = require('../models/Subject');
+const User = require('../models/User');
 
-// 1. Add Subject
 exports.addSubject = async (req, res) => {
     try {
-        const { name, code, weeklyHours, type, department } = req.body;
+        const { name, type, department, classesPerWeek, labDuration } = req.body;
 
-        // Manual check - allow same name if type is different (Theory vs Lab)
-        const existing = await Subject.findOne({ name: name.trim(), type: type || 'Theory' });
-        if (existing) {
-            return res.status(400).json({ msg: `This ${type || 'Theory'} subject already exists. Try a different name or change the type.` });
-        }
-        
-        // Also check if same code is used
-        const codeExists = await Subject.findOne({ code: code?.trim() });
-        if (codeExists) {
-            return res.status(400).json({ msg: "Subject code already exists. Use a unique code." });
-        }
+        // Allow duplicate names only when the type differs (Theory vs Lab)
+        const existing = await Subject.findOne({ name: name.trim(), type });
+        if (existing) return res.status(400).json({ msg: 'Subject name already exists with this type' });
 
-        const newSubject = new Subject({
-            name: name.trim(),
-            code: code || `SUB-${Date.now()}`,
-            weeklyHours: Number(weeklyHours),
-            type: type || 'Theory',
-            department: department || 'MCA'
+        const newSubject = new Subject({ 
+            name: name.trim(), 
+            type: type || 'Theory', 
+            department: department || 'General',
+            classesPerWeek: Number(classesPerWeek) || 4,
+            labDuration: Number(labDuration) || 2
         });
-
+        
         await newSubject.save();
         res.status(201).json(newSubject);
     } catch (err) {
-        if (err.code === 11000) {
-            return res.status(400).json({ msg: "Database Conflict: Duplicate Entry." });
-        }
-        res.status(500).json({ msg: "Internal Error" });
+        res.status(500).json({ msg: 'Database error' });
     }
 };
-// 2. Get All
+
+exports.getSubjects = async (req, res) => {
+    try {
+        const subjects = await Subject.find().sort({ name: 1 });
+        res.json(subjects);
+    } catch (err) {
+        res.status(500).json({ msg: 'Fetch error' });
+    }
+};
+
+exports.updateSubject = async (req, res) => {
+    try {
+        const updatedSubject = await Subject.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+        if (!updatedSubject) return res.status(404).json({ msg: 'Subject not found' });
+        res.json(updatedSubject);
+    } catch (err) {
+        res.status(500).json({ msg: 'Update failed' });
+    }
+};
+
+exports.deleteSubject = async (req, res) => {
+    try {
+        const subject = await Subject.findById(req.params.id);
+        if (!subject) return res.status(404).json({ msg: 'Subject not found' });
+        
+        // Remove this subject from every faculty member who was teaching it
+        await User.updateMany(
+            { expertise: subject.name },
+            { $pull: { expertise: subject.name } }
+        );
+        
+        await Subject.findByIdAndDelete(req.params.id);
+        res.json({ msg: 'Subject deleted and removed from all faculty' });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+};
+
 exports.getSubjects = async (req, res) => {
     try {
         const subjects = await Subject.find();
@@ -44,9 +70,9 @@ exports.getSubjects = async (req, res) => {
     }
 };
 
-// 3. Update Subject (For Rearrangements)
 exports.updateSubject = async (req, res) => {
     try {
+        // Apply the incoming changes directly to the subject record
         const subject = await Subject.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json({ msg: "Subject logic updated", subject });
     } catch (err) {
@@ -54,14 +80,19 @@ exports.updateSubject = async (req, res) => {
     }
 };
 
-// 4. Delete Subject (Purge Node)
 exports.deleteSubject = async (req, res) => {
     try {
         const subject = await Subject.findById(req.params.id);
         if (!subject) return res.status(404).json({ msg: 'Subject not found' });
         
+        // Scrub this subject from every faculty member's expertise list before deleting it
+        await User.updateMany(
+            { expertise: subject.name },
+            { $pull: { expertise: subject.name } }
+        );
+        
         await Subject.findByIdAndDelete(req.params.id);
-        res.json({ msg: 'Logic module purged from matrix' });
+        res.json({ msg: 'Logic module purged from matrix, removed from all teachers' });
     } catch (err) {
         res.status(500).send('Server Error');
     }

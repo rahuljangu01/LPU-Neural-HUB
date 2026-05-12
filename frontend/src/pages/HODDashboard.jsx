@@ -21,7 +21,7 @@ const timeSlots = [
   "09:00 - 10:00", 
   "10:00 - 11:00", 
   "11:00 - 12:00", 
-  "12:00 - 01:00",  // Lunch Break
+  "12:00 - 01:00",  // Lunch break slot -- no classes scheduled here
   "01:00 - 02:00", 
   "02:00 - 03:00", 
   "03:00 - 04:00", 
@@ -95,7 +95,7 @@ const HODDashboard = () => {
       const batchesData = extractData(b);
       const subjectsData = extractData(sub);
       
-      // Handle timetable data - FILTER BY DEPARTMENT
+      // Only show data for the HOD's own department
       let timetableData = [];
       if (Array.isArray(s.data)) {
         timetableData = s.data;
@@ -103,18 +103,15 @@ const HODDashboard = () => {
         timetableData = s.data.schedule;
       }
       
-      // Filter timetable by HOD's department
       timetableData = timetableData.filter(t => t.department === userDept);
       
-      // Filter faculties by department
       const deptFaculties = usersData.filter(user => 
         (user.role === 'faculty' || user.role === 'hod') && user.department === userDept
       );
       
-      // Filter batches by department
       const deptBatches = batchesData.filter(b => b.department === userDept);
       
-      // Check verified status from user data
+      // Sync verified status from the server into localStorage
       const myUser = usersData.find(u => u.email === localStorage.getItem('userEmail'));
       if (myUser) {
         setVerified(myUser.verified || false);
@@ -148,7 +145,7 @@ const HODDashboard = () => {
     else setView('main');
   }, [fetchHubIntel, location.pathname]);
 
-  // Refetch when view changes to monitor
+  // Re-fetch data whenever entering the monitor view to ensure fresh data
   useEffect(() => {
     if (view === 'monitor') {
       fetchHubIntel();
@@ -156,13 +153,13 @@ const HODDashboard = () => {
   }, [view, fetchHubIntel]);
 
   const analytics = useMemo(() => {
-    const slotsPerDay = timeSlots.length - 1; // 8 total - 1 lunch = 7 teaching slots
-    const teachingDays = 5; // Monday to Friday (5 days)
+    const slotsPerDay = timeSlots.length - 1; // 8 slots minus 1 lunch = 7 teaching slots
+    const teachingDays = 5;
     const totalRooms = rooms.length || 1;
     const totalPossibleSlots = totalRooms * slotsPerDay * teachingDays;
-    // Count filled slots excluding lunch
+    // Exclude lunch from utilization count
     const filledSlots = currentSchedule.filter(c => c.timeSlot !== '12:00 - 01:00').length;
-    // Show 100% if there's any schedule, or calculate actual utilization
+    // If any schedule exists show 100%, otherwise calculate actual utilization
     const util = currentSchedule.length > 0 
       ? (totalPossibleSlots > 0 ? Math.min(100, Math.round((filledSlots / totalPossibleSlots) * 100)) : 100)
       : 0;
@@ -251,7 +248,9 @@ const HODDashboard = () => {
         }, 1000);
       } catch (err) { 
         console.error('❌ Deploy error:', err);
-        errorAlert("Error", "Deployment failed."); 
+        const serverMsg = err.response?.data?.error || err.response?.data?.msg || "Deployment failed.";
+        errorAlert("Deploy Error", serverMsg); 
+        console.error('Server response:', err.response?.data);
       } finally {
         setIsGenerating(false);
       }
@@ -300,7 +299,6 @@ const HODDashboard = () => {
         const batch = cls.batch || '';
         const subject = cls.subject || '';
         
-        // Check if Practical/Lab
         let isPractical = false;
         if (cls.type) {
           const type = cls.type.toLowerCase();
@@ -311,13 +309,13 @@ const HODDashboard = () => {
           isPractical = true;
         }
         
-        // AttendanceType: L for Lecture, P for Practical
+        // ERP format expects L for Lecture and P for Practical
         const attendanceType = isPractical ? "P" : "L";
         
-        // StudentGroup: Check studentGroup field first
+        // Use the explicit studentGroup field first, fall back to extracting from batch name
         let studentGroup = cls.studentGroup || "0";
         
-        // If studentGroup is not G1/G2, check batch name
+        // When no group is set, try to infer it from the batch name (e.g. D2421G1)
         if (studentGroup === "0" || !studentGroup) {
           const batchStr = batch.toString().toUpperCase();
           if (batchStr.includes('G1')) {
@@ -327,7 +325,7 @@ const HODDashboard = () => {
           }
         }
         
-        // Day format: Short form only
+        // ERP expects 3-letter day abbreviations
         const dayMap = { 'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun' };
         const dayLower = (cls.day || '').toLowerCase();
         const dayShort = dayMap[dayLower] || cls.day;
@@ -344,7 +342,7 @@ const HODDashboard = () => {
         };
       });
       
-      // Sort by day order: Mon, Tue, Wed, Thu, Fri, Sat
+      // Sort rows by weekday order so Monday appears first
       const dayOrder = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7 };
       excelData.sort((a, b) => {
         const dayA = dayOrder[a.AttendanceDay] || 8;
@@ -398,7 +396,7 @@ const HODDashboard = () => {
     { id: 'monitor', label: 'All Schedules', sub: 'View & Manage Timetable', icon: Activity, color: 'from-red-800 to-rose-800' },
   ];
 
-  // 🚫 NOT VERIFIED - Show waiting screen
+  // Show waiting screen when admin has not yet verified this HOD account
   if (!verified) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -439,7 +437,6 @@ const HODDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-100 font-['Outfit']">
       
-      {/* AI GENERATION OVERLAY - LIGHT & ANIMATED */}
       <AnimatePresence>
         {isGenerating && (
           <motion.div 
@@ -450,7 +447,6 @@ const HODDashboard = () => {
           >
             <div className="flex flex-col items-center">
               
-              {/* Animated Loader */}
               <div className="relative w-32 h-32 mb-6">
                 <motion.div
                   className="absolute inset-0 rounded-full border-4 border-red-100"
@@ -467,7 +463,6 @@ const HODDashboard = () => {
                 </div>
               </div>
 
-              {/* Percentage */}
               <motion.div 
                 key={genStep}
                 initial={{ opacity: 0, y: 10 }}
@@ -480,12 +475,10 @@ const HODDashboard = () => {
                 <span className="text-3xl text-red-500 font-bold">%</span>
               </motion.div>
 
-              {/* Status Text */}
               <p className="text-slate-600 font-medium text-base mb-4">
                 {aiSteps[Math.min(genStep, aiSteps.length - 1)]}
               </p>
 
-              {/* Step Dots */}
               <div className="flex gap-2 mb-6">
                 {aiSteps.map((_, i) => (
                   <motion.div
@@ -497,7 +490,6 @@ const HODDashboard = () => {
                 ))}
               </div>
 
-              {/* Info Cards */}
               <div className="flex gap-3">
                 <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-center">
                   <p className="text-xl font-black text-slate-800">{rooms.length}</p>
@@ -517,13 +509,10 @@ const HODDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
         
-        {/* HEADER - CLEAN & COMPACT */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-slate-200">
           
-          {/* Left - Logo & Title */}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center shadow-lg">
               <GraduationCap size={24} className="text-white"/>
@@ -541,16 +530,13 @@ const HODDashboard = () => {
             </div>
           </div>
 
-          {/* Right - Stats Compact */}
           <div className="flex items-center gap-3 flex-wrap">
             
-            {/* Utilization - Simple & Clean */}
             <div className="bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2 rounded-xl shadow-lg">
               <p className="text-[9px] font-bold text-red-200 uppercase mb-0.5">Utilization</p>
               <p className="text-2xl font-black text-white">{analytics.util}%</p>
             </div>
 
-            {/* Mini Stats - Horizontal */}
             <div className="flex gap-2">
               <div className="bg-slate-100 px-3 py-2 rounded-lg text-center">
                 <p className="text-lg font-black text-slate-800">{analytics.totalRooms || 0}</p>
@@ -570,7 +556,6 @@ const HODDashboard = () => {
               </div>
             </div>
 
-            {/* Refresh */}
             <button 
               onClick={fetchHubIntel}
               className="w-10 h-10 bg-slate-100 hover:bg-red-100 p-2 rounded-lg text-slate-500 hover:text-red-600 transition-all"
@@ -580,10 +565,8 @@ const HODDashboard = () => {
           </div>
         </div>
 
-        {/* CONTENT */}
         <AnimatePresence mode="wait">
           
-          {/* MAIN VIEW */}
           {view === 'main' && (
             <motion.div 
               key="main"
@@ -626,7 +609,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* PERSONNEL VIEW */}
           {view === 'personnel' && (
             <motion.div 
               key="personnel"
@@ -694,7 +676,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* OPTIMIZER HUB */}
           {view === 'optimizer_hub' && (
             <motion.div 
               key="optimizer"
@@ -811,7 +792,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* OPTIMIZER RESULTS */}
           {view === 'optimizer_results' && (
             <motion.div 
               key="results"
@@ -840,12 +820,11 @@ const HODDashboard = () => {
                       <p className="text-[10px] text-red-400 uppercase font-bold">Total Classes</p>
                       <p className="text-2xl font-black text-white">
                         {(() => {
-                          // Count EXACTLY like the grid shows (one per cell)
+                          // Count only non-lunch slots to match what the visual grid displays
                           let count = 0;
                           days.forEach(d => {
                             timeSlots.forEach(s => {
                               if (s !== '12:00 - 01:00') {
-                                // Same logic as grid - find first match
                                 const hasSession = variants[activeVariantIndex]?.schedule.find(
                                   cs => cs.day === d && cs.timeSlot === s
                                 );
@@ -870,7 +849,7 @@ const HODDashboard = () => {
 
                 <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                   {variants.map((v, i) => {
-                    // Count EXACTLY like the grid shows
+                    // Count non-lunch slots to match the visual grid
                     let count = 0;
                     days.forEach(d => {
                       timeSlots.forEach(s => {
@@ -890,8 +869,8 @@ const HODDashboard = () => {
                             : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                         }`}
                       >
-                        <Atom size={14}/> Option {i+1}
-                        <span className="text-[10px] opacity-70">({count})</span>
+                        <Atom size={14}/> {v.label || `Option ${i+1}`}
+                        <span className="text-[10px] opacity-70">({v.totalClasses || count})</span>
                       </button>
                     );
                   })}
@@ -914,7 +893,7 @@ const HODDashboard = () => {
                           <h1 className="text-sm font-bold text-white uppercase py-2 border-b border-slate-700">{d.slice(0,3)}</h1>
                           {timeSlots.map((s, i) => {
                             const session = variants[activeVariantIndex]?.schedule.find(cs => cs.day === d && cs.timeSlot === s);
-                            // G1/G2 styling
+                            // Color-code G1 batches blue and G2 batches purple
                             const isG1Batch = session?.batch && /G1$/i.test(session.batch);
                             const isG2Batch = session?.batch && /G2$/i.test(session.batch);
                             const sessionBg = session 
@@ -957,7 +936,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* MONITOR VIEW */}
           {view === 'monitor' && (
             <motion.div 
               key="monitor"
@@ -1021,7 +999,7 @@ const HODDashboard = () => {
                 <div className="space-y-8">
                   {Object.keys(groupedSchedule).map((batchName, idx) => {
                     const batchClasses = groupedSchedule[batchName];
-                    // Check if this is a G1/G2 batch
+                    // Detect whether the batch is a G1 or G2 subgroup for color coding
                     const isG1 = /G1$/i.test(batchName);
                     const isG2 = /G2$/i.test(batchName);
                     const subGroupBadge = isG1 ? 'bg-blue-500/20 text-blue-400' : (isG2 ? 'bg-purple-500/20 text-purple-400' : 'bg-red-500/20 text-red-400');
@@ -1084,7 +1062,7 @@ const HODDashboard = () => {
                                   <h1 className="text-sm font-bold text-white uppercase py-2 border-b border-slate-700">{d.slice(0,3)}</h1>
                                   {timeSlots.map((s, i) => {
                                     const session = batchClasses.find(cs => cs.day === d && cs.timeSlot === s);
-                                    // G1/G2 styling
+                                    // Color-code G1 batches blue and G2 batches purple
                                     const isG1Batch = /G1$/i.test(batchName);
                                     const isG2Batch = /G2$/i.test(batchName);
                                     const sessionBg = session 
@@ -1143,7 +1121,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* SCANNER VIEW */}
           {view === 'scanner' && (
             <motion.div 
               key="scanner"
@@ -1210,7 +1187,6 @@ const HODDashboard = () => {
             </motion.div>
           )}
 
-          {/* SCANNER RESULTS */}
           {view === 'scanner_results' && (
             <motion.div 
               key="scanner_res"
@@ -1261,7 +1237,6 @@ const HODDashboard = () => {
           )}
         </AnimatePresence>
 
-        {/* FOOTER */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -2,7 +2,7 @@ const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const axios = require('axios'); // Naya import
+const axios = require('axios');
 const User = require('./models/User');
 require('dotenv').config();
 
@@ -39,7 +39,6 @@ const startServer = async () => {
         await connectDB(); 
         await seedAdmin();
 
-        // API ROUTES
         app.use('/api/auth', require('./routes/authRoutes'));
         app.use('/api/rooms', require('./routes/roomRoutes'));
         app.use('/api/subjects', require('./routes/subjectRoutes'));
@@ -54,14 +53,13 @@ const startServer = async () => {
         app.listen(PORT, () => {
             console.log(`🚀 AI ENGINE RUNNING ON PORT ${PORT}`);
             
-            // 🔥 SELF-WAKEUP LOGIC (Prevents Render Sleep Mode)
-            // Har 10 minute mein yeh server khud ko hi ping karega
+            // Self-wakeup: pings the server every 10 minutes to prevent Render from sleeping
             setInterval(() => {
-                const liveUrl = "https://lpu-neural-hub-backend.onrender.com/"; // Aapka Render URL
+                const liveUrl = "https://lpu-neural-hub-backend.onrender.com/";
                 axios.get(liveUrl)
                     .then(() => console.log('Ping Success: Neural Hub is Awake'))
                     .catch((err) => console.log('Ping Failed: Manual wake-up might be needed'));
-            }, 600000); // 600,000 ms = 10 minutes
+            }, 600000);
         });
     } catch (error) {
         console.error("🔥 CRITICAL ERROR:", error.message);

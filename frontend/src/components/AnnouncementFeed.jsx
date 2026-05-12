@@ -15,7 +15,7 @@ const AnnouncementFeed = () => {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 10000); // Har 10 sec mein refresh
+    const interval = setInterval(fetchMessages, 10000);
     return () => clearInterval(interval);
   }, [fetchMessages]);
 

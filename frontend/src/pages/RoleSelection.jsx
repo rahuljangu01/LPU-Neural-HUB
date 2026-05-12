@@ -38,7 +38,6 @@ const RoleSelection = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 sm:p-6 font-['Outfit'] overflow-hidden relative">
-      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div 
           animate={{ 
@@ -66,9 +65,7 @@ const RoleSelection = () => {
         transition={{ duration: 0.5 }}
         className="max-w-5xl w-full bg-white/5 backdrop-blur-2xl rounded-3xl sm:rounded-[2rem] md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-white/10 relative z-10"
       >
-        {/* Left Side - Branding */}
         <div className="w-full md:w-5/12 bg-gradient-to-br from-slate-800 to-slate-900 p-6 sm:p-8 md:p-12 flex flex-col items-center justify-center relative overflow-hidden border-b md:border-b-0 md:border-r border-white/5">
-          {/* Animated Background Elements */}
           <motion.div 
             animate={{ rotate: 360 }}
             transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
@@ -83,7 +80,6 @@ const RoleSelection = () => {
             className="absolute top-20 right-20 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl"
           />
           
-          {/* Mobile Logo */}
           <div className="md:hidden flex flex-col items-center z-10">
             <motion.div 
               animate={{ scale: [1, 1.05, 1] }}
@@ -126,7 +122,6 @@ const RoleSelection = () => {
           </div>
         </div>
 
-        {/* Right Side - Role Selection */}
         <div className="w-full md:w-7/12 p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-center">
           <motion.button 
             initial={{ opacity: 0, x: -20 }}

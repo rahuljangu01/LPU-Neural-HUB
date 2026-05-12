@@ -1,6 +1,5 @@
 const Room = require('../models/Room');
 
-// 1. Add Room with Capacity & Type (AI Parameters)
 exports.addRoom = async (req, res) => {
     try {
         const { roomNumber, capacity, type, block } = req.body;
@@ -9,7 +8,7 @@ exports.addRoom = async (req, res) => {
             return res.status(400).json({ msg: "Room Number and Capacity are mandatory" });
         }
 
-        // Check Duplication
+        // Skip creation if this room number is already registered
         const existingRoom = await Room.findOne({ roomNumber: roomNumber.trim() });
         if (existingRoom) return res.status(400).json({ msg: "Room already exists in database" });
 
@@ -17,7 +16,7 @@ exports.addRoom = async (req, res) => {
             roomNumber: roomNumber.trim(),
             capacity: Number(capacity),
             type: type || 'Theory', 
-            block: block || 'General' // Default block if not provided
+            block: block || 'General'
         });
 
         await newRoom.save();
@@ -27,7 +26,6 @@ exports.addRoom = async (req, res) => {
     }
 };
 
-// 2. Get All Rooms
 exports.getRooms = async (req, res) => {
     try {
         const rooms = await Room.find().sort({ roomNumber: 1 });
@@ -37,7 +35,6 @@ exports.getRooms = async (req, res) => {
     }
 };
 
-// 3. Delete Room (Crucial for "Purge Node" feature)
 exports.deleteRoom = async (req, res) => {
     try {
         const deletedRoom = await Room.findByIdAndDelete(req.params.id);

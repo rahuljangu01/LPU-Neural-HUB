@@ -2,71 +2,61 @@ const Timetable = require('../models/Timetable');
 const Room = require('../models/Room');
 const User = require('../models/User');
 
-// 1. AI BULK DEPLOYMENT - Replace timetable for specific batch
 exports.addBulkSlots = async (req, res) => {
     try {
-        const { schedule, batchId } = req.body;
+        const { schedule } = req.body;
 
         if (!schedule || schedule.length === 0) {
             return res.status(400).json({ msg: "No schedule data received from AI Engine." });
         }
 
-        console.log('📥 addBulkSlots received:', {
-            count: schedule.length,
-            batches: [...new Set(schedule.map(slot => slot.batch))],
-            batchId: batchId
-        });
+        const uids = [...new Set(schedule.map(s => s.facultyUid).filter(Boolean))];
+        const facultyMap = {};
+        if (uids.length > 0) {
+            const facultyUsers = await User.find({ uid: { $in: uids } });
+            for (const fu of facultyUsers) {
+                facultyMap[fu.uid] = fu._id;
+            }
+        }
 
-        // Only delete timetable for the specific batch being deployed
-        const batchesToReplace = [...new Set(schedule.map(slot => slot.batch))];
-        await Timetable.deleteMany({ batch: { $in: batchesToReplace } });
+        const batchesToReplace = [...new Set(schedule.map(slot => slot.batch).filter(Boolean))];
+        if (batchesToReplace.length > 0) {
+            await Timetable.deleteMany({ batch: { $in: batchesToReplace } });
+        }
 
-        const finalSchedule = await Promise.all(schedule.map(async (slot) => {
-            const facultyUser = await User.findOne({ uid: slot.facultyUid});
-            
-            // Use subGroup from schedule data
+        const finalSchedule = schedule.map((slot) => {
             const groupValue = slot.subGroup || slot.studentGroup;
             let studentGroup = '0';
             if (groupValue === 'G1' || groupValue === 'G2') {
                 studentGroup = groupValue;
             }
-            
-            const entry = {
+
+            return {
                 day: slot.day,
                 timeSlot: slot.timeSlot,
                 subject: slot.subject,
                 subjectCode: slot.subjectCode,
                 type: slot.type || 'Theory',
-                faculty: facultyUser ? facultyUser._id : null,
-                facultyUid: slot.facultyUid,
-                room: slot.room,
-                batch: slot.batch,
+                faculty: slot.facultyUid ? (facultyMap[slot.facultyUid] || null) : null,
+                facultyUid: slot.facultyUid || null,
+                room: String(slot.room),
+                batch: String(slot.batch),
                 studentGroup: studentGroup,
                 department: slot.department || 'General'
             };
-            
-            return entry;
-        }));
-
-        console.log('💾 Saving to DB (replacing ALL):', {
-            count: finalSchedule.length,
-            batches: [...new Set(finalSchedule.map(e => e.batch))]
         });
 
         await Timetable.insertMany(finalSchedule);
-        
-        // Verify the save
-        const savedCount = await Timetable.countDocuments();
-        console.log('✅ Verified - Total entries in DB:', savedCount);
-        
-        res.json({ msg: '✅ Neural Matrix Deployed & Locked Successfully!', count: finalSchedule.length, total: savedCount });
+
+        res.json({ msg: 'Timetable Deployed Successfully!', count: finalSchedule.length });
     } catch (err) {
         console.error("Bulk Deploy Error:", err.message);
-        res.status(500).json({ msg: 'Deployment Logic Failure', error: err.message });
+        console.error("Bulk Deploy Stack:", err.stack);
+        res.status(500).json({ msg: 'Deployment Logic Failure', error: err.message, stack: err.stack });
     }
 };
 
-// 2. Manual Overrides (Single Slot Addition)
+// Manually add a single slot — fails if the same room, faculty or batch is already booked
 exports.addSlot = async (req, res) => {
     const { day, timeSlot, subject, faculty, room, batch, department } = req.body;
     try {
@@ -87,7 +77,7 @@ exports.addSlot = async (req, res) => {
     }
 };
 
-// 3. LIVE Tracking
+// Return every room with its current booking status for a given day and time
 exports.checkLiveStatus = async (req, res) => {
     const { day, timeSlot } = req.query; 
     try {
@@ -100,7 +90,7 @@ exports.checkLiveStatus = async (req, res) => {
                 roomNumber: room.roomNumber,
                 block: room.block,
                 capacity: room.capacity,
-                type: room.type, // 👈 Yeh line missing thi, ise add karein
+                type: room.type,
                 isAvailable: !occupation,
                 facultyName: occupation && occupation.faculty ? occupation.faculty.name : null,
                 facultyUid: occupation && occupation.faculty ? occupation.faculty.uid : null,
@@ -113,17 +103,10 @@ exports.checkLiveStatus = async (req, res) => {
     }
 };
 
-// Function 4 ko isse replace karein:
+// Fetch all timetable entries with faculty name/uid populated
 exports.getTimetable = async (req, res) => {
     try {
-        // Naya: 'name uid' dono fetch honge
         const timetable = await Timetable.find().populate('faculty', 'name uid').sort({ day: 1 });
-        
-        console.log('📋 Timetable fetched from DB:', {
-            count: timetable.length,
-            batches: [...new Set(timetable.map(t => t.batch))],
-            firstEntry: timetable[0]
-        });
         
         res.json(timetable);
     } catch (err) {
@@ -131,7 +114,6 @@ exports.getTimetable = async (req, res) => {
     }
 };
 
-// 5. Delete Specific Slot
 exports.cancelSlot = async (req, res) => {
     try {
         await Timetable.findByIdAndDelete(req.params.id);

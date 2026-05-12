@@ -21,12 +21,14 @@ const Login = () => {
       localStorage.setItem('userName', res.data.name);
       localStorage.setItem('userEmail', res.data.email);
       localStorage.setItem('userBatch', res.data.batch || ''); 
+      localStorage.setItem('userGroup', res.data.group || 'N/A');
       localStorage.setItem('userElectiveBatch', res.data.electiveBatch || '');
       localStorage.setItem('userUid', res.data.uid);
       localStorage.setItem('userDepartment', res.data.department || '');
+      localStorage.setItem('userRollNo', res.data.rollNo || '0');
       localStorage.setItem('userVerified', res.data.verified ? 'true' : 'false');
       
-      // Check if HOD is not verified
+      // Unverified HODs see a pending notice instead of the normal welcome
       if (res.data.role?.toLowerCase() === 'hod' && !res.data.verified) {
         welcomeToast(res.data.name + ' - Verification Pending');
       } else {
@@ -41,7 +43,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 sm:p-6 font-['Outfit'] overflow-hidden relative">
-      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div 
           animate={{ 
@@ -69,9 +70,7 @@ const Login = () => {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="max-w-5xl w-full bg-white/5 backdrop-blur-2xl rounded-3xl sm:rounded-[2rem] md:rounded-[3rem] shadow-2xl flex flex-col md:flex-row overflow-hidden border border-white/10 relative z-10"
       >
-        {/* Left Side - Form */}
         <div className="w-full md:w-1/2 p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col justify-center">
-          {/* Mobile Logo */}
           <div className="md:hidden flex flex-col items-center mb-8">
             <motion.div 
               animate={{ scale: [1, 1.05, 1] }}
@@ -181,9 +180,7 @@ const Login = () => {
           </motion.p>
         </div>
 
-        {/* Right Side - Visual */}
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-slate-800 to-slate-900 p-12 items-center justify-center relative overflow-hidden border-l border-white/5">
-          {/* Animated Background Elements */}
           <motion.div 
             animate={{ rotate: 360 }}
             transition={{ duration: 30, repeat: Infinity, ease: "linear" }}

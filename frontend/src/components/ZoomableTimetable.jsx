@@ -8,10 +8,9 @@ const ZoomableTimetable = ({ children, className = "" }) => {
   const containerRef = useRef(null);
   const lastTouchRef = useRef({ distance: 0, centerX: 0, centerY: 0 });
 
-  // Check if mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint in Tailwind
+      setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -76,13 +75,13 @@ const ZoomableTimetable = ({ children, className = "" }) => {
     
     if (e.touches.length < 2) {
       setIsDragging(false);
-      // Snap to clean values
+      // Snap zoom to clean values
       if (zoom < 1.25) setZoom(1);
       else if (zoom < 1.75) setZoom(1.5);
       else if (zoom < 2.5) setZoom(2);
       else setZoom(3);
       
-      // Reset position if zoom is 1
+      // Reset position when zoomed all the way out
       if (zoom <= 1.1) {
         setPosition({ x: 0, y: 0 });
       }
@@ -100,7 +99,7 @@ const ZoomableTimetable = ({ children, className = "" }) => {
     }
   }, [zoom, isMobile]);
 
-  // Don't render zoom controls on desktop
+  // Desktop: passthrough without zoom controls
   if (!isMobile) {
     return (
       <div className={`overflow-auto ${className}`}>
@@ -111,7 +110,6 @@ const ZoomableTimetable = ({ children, className = "" }) => {
 
   return (
     <div className="relative">
-      {/* Zoom Controls - Only on Mobile */}
       {zoom > 1 && (
         <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 bg-black/80 backdrop-blur-sm rounded-xl p-2 shadow-lg">
           <button
@@ -148,7 +146,6 @@ const ZoomableTimetable = ({ children, className = "" }) => {
         </div>
       )}
 
-      {/* Zoomable Container - Only on Mobile */}
       <div
         ref={containerRef}
         className={`overflow-auto touch-none ${className}`}
